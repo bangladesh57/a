@@ -7,61 +7,38 @@
     <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
     <style>
-        :root { --primary: #004d40; --secondary: #00695c; --bg: #f4f7f6; --white: #ffffff; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; color: #333; overflow-x: hidden; }
+        :root { --primary: #004d40; --secondary: #00695c; --bg: #f4f7f6; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; color: #333; }
 
-        /* Welcome & Manual Overlay */
-        #manual-overlay {
+        /* Overlays */
+        #manual-overlay, #auth-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: white; z-index: 3000; display: flex; flex-direction: column;
             align-items: center; justify-content: center; padding: 20px; box-sizing: border-box;
         }
-        .manual-box {
-            max-width: 550px; background: #e0f2f1; padding: 25px; border-radius: 15px;
-            border-left: 10px solid var(--primary); color: #002d2d; box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-        }
+        #auth-screen { display: none; z-index: 2500; background: var(--bg); }
 
-        /* Login Screen */
-        #auth-screen { display: none; align-items: center; justify-content: center; height: 100vh; }
-        .auth-card { 
-            width: 95%; max-width: 400px; background: white; padding: 35px; 
-            border-radius: 20px; box-shadow: 0 15px 40px rgba(0,0,0,0.1); text-align: center; 
+        .auth-card, .manual-box {
+            width: 95%; max-width: 450px; background: white; padding: 30px; 
+            border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center;
         }
+        .manual-box { background: #e0f2f1; border-left: 10px solid var(--primary); text-align: left; }
 
-        h1 { color: var(--primary); margin-bottom: 5px; font-weight: 800; }
-        input { 
-            width: 100%; padding: 14px; margin-bottom: 15px; border-radius: 10px; 
-            border: 1px solid #ccc; box-sizing: border-box; font-size: 14px; outline: none;
-        }
-        button { 
-            width: 100%; padding: 14px; border-radius: 10px; border: none; 
-            font-weight: bold; cursor: pointer; transition: 0.3s; margin-bottom: 10px;
-        }
+        input { width: 100%; padding: 14px; margin-bottom: 15px; border-radius: 10px; border: 1px solid #ccc; box-sizing: border-box; outline: none; }
+        button { width: 100%; padding: 14px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; margin-bottom: 10px; }
         .btn-main { background: var(--primary); color: white; }
-        .btn-consent { background: var(--primary); color: white; margin-top: 25px; font-size: 16px; width: auto; padding: 15px 40px; }
 
-        /* Progress & Copy Section */
+        /* Copy & Progress */
         #progress-container { display: none; margin-top: 15px; }
         .progress-bar { width: 100%; height: 8px; background: #eee; border-radius: 10px; overflow: hidden; }
         .progress-fill { height: 100%; background: var(--secondary); width: 0%; transition: linear; }
-        
         #copy-section { display: none; margin-top: 15px; background: #fff9c4; padding: 10px; border-radius: 8px; border: 1px dashed #fbc02d; }
-        .btn-copy { background: #fbc02d; color: #333; padding: 10px; font-size: 13px; margin-top: 8px; width: auto; display: inline-block; }
 
-        /* Main App Interface */
+        /* Main App */
         #app { display: none; padding-top: 250px; }
-        .fixed-header { position: fixed; top: 0; width: 100%; background: var(--primary); color: white; z-index: 1000; padding: 15px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .fixed-header { position: fixed; top: 0; width: 100%; background: var(--primary); color: white; z-index: 1000; padding: 15px 0; }
         .container { max-width: 600px; margin: auto; padding: 0 15px; }
-        
-        /* Message Card Logic (Fixed size & word wrap) */
-        .msg-card { 
-            background: white; padding: 18px; margin-bottom: 15px; border-radius: 12px; 
-            border-left: 6px solid var(--primary); box-shadow: 0 3px 10px rgba(0,0,0,0.05);
-            width: 100%; box-sizing: border-box; 
-            word-wrap: break-word; word-break: break-all; overflow-wrap: break-word;
-        }
-        .msg-body { white-space: pre-wrap; font-size: 15px; line-height: 1.5; color: #333; }
-        
+        .msg-card { background: white; padding: 18px; margin-bottom: 15px; border-radius: 12px; border-left: 6px solid var(--primary); box-shadow: 0 3px 10px rgba(0,0,0,0.05); word-wrap: break-word; }
         textarea { width: 100%; border: 1px solid #ddd; border-radius: 10px; padding: 12px; resize: none; font-family: inherit; box-sizing: border-box; }
     </style>
 </head>
@@ -69,36 +46,28 @@
 
 <div id="manual-overlay">
     <div class="manual-box">
-        <h2 style="margin-top:0; color: var(--primary);">📖 নেটওয়ার্ক নির্দেশিকা ও উদ্দেশ্য</h2>
-        <p><b>উদ্দেশ্য:</b> এটি একটি বিকেন্দ্রীভূত (Decentralized) ইনফরমেশন নেটওয়ার্ক। কোনো কেন্দ্রীয় সার্ভার না থাকায় এখানে আপনার তথ্য নিরাপদ এবং সেন্সরশিপ মুক্ত। জরুরি মুহূর্তে সঠিক তথ্য প্রচার করাই এর লক্ষ্য।</p>
-        <ul style="font-size: 14px; line-height: 1.7;">
-            <li><b>আইডেন্টিটি:</b> আপনার 'প্রাইভেট কি'-ই আপনার একমাত্র পরিচয়। এটি হারিয়ে ফেললে অ্যাকাউন্ট ফিরে পাওয়া সম্ভব নয়।</li>
-            <li><b>ডিভাইস লক:</b> নিরাপত্তার স্বার্থে একবার লগইন করলে একাউন্টটি ৩০ দিনের জন্য এই ডিভাইসে সংরক্ষিত থাকবে।</li>
-            <li><b>অটো ডিলিট:</b> নেটওয়ার্ক পরিষ্কার রাখতে প্রতিটি মেসেজ ৭২ ঘণ্টা পর স্বয়ংক্রিয়ভাবে মুছে যাবে।</li>
-            <li><b>ব্যবহারকারীর ক্ষমতা:</b> ভালো তথ্যে 'Trust' দিন। ট্রাস্ট স্কোর বাড়লে আপনার দৈনিক পোস্ট করার সীমা বৃদ্ধি পাবে।</li>
+        <h2 style="color: var(--primary); margin-top:0;">📖 নেটওয়ার্ক গাইডলাইন</h2>
+        <p>এই সিস্টেমটি আপনার নিরাপত্তা নিশ্চিত করতে <b>ডিভাইস-লক</b> প্রযুক্তি ব্যবহার করে।</p>
+        <ul style="font-size: 14px; line-height: 1.6;">
+            <li><b>৩০ দিন লক:</b> একবার লগইন করলে পরবর্তী ৩০ দিন এটি অন্য কোনো ডিভাইসে ব্যবহার করা যাবে না।</li>
+            <li><b>স্থায়ী আইডি:</b> ব্রাউজার ডাটা ক্লিন না করলে আপনার লগইন সবসময় সচল থাকবে।</li>
         </ul>
-        <div style="text-align: right; font-weight: bold; margin-top: 15px; border-top: 1px dashed #b2dfdb; padding-top: 10px; color: var(--primary);">
-            — মেসেজটি করেছেন: Ana Abdulloh57
-        </div>
+        <div style="text-align: right; font-weight: bold; margin-top: 10px; color: var(--primary);">— Ana Abdulloh57</div>
     </div>
-    <button class="btn-consent" onclick="acceptConsent()">আমি পড়েছি ও সম্মতি দিচ্ছি</button>
+    <button class="btn-main" style="max-width:450px; margin-top:20px;" onclick="acceptConsent()">সম্মতি দিচ্ছি</button>
 </div>
 
 <div id="auth-screen">
     <div class="auth-card">
         <h1>বাংলাদেশ</h1>
-        <p style="color: #666; font-size: 13px; margin-bottom: 25px;">Guardian Digital Identity System</p>
-        <input type="text" id="keyInput" placeholder="প্রাইভেট কি এখানে পেস্ট করুন...">
-        <button class="btn-main" onclick="login()">Access Network</button>
-        <button style="background: #e0e0e0; color: #333;" id="genBtn" onclick="generateIdentity()">নতুন আইডি তৈরি (১০ সেকেন্ড)</button>
-        
+        <input type="text" id="keyInput" placeholder="প্রাইভেট কি দিন...">
+        <button class="btn-main" id="loginBtn" onclick="login()">Access Identity</button>
+        <button style="background: #e0e0e0;" id="genBtn" onclick="generateIdentity()">নতুন আইডি তৈরি (১০ সেকেন্ড)</button>
         <div id="progress-container">
-            <div style="font-size: 11px; margin-bottom: 5px; color: var(--primary);">সিকিউর কি জেনারেট হচ্ছে... <span id="percent">0%</span></div>
             <div class="progress-bar"><div class="progress-fill" id="fill"></div></div>
-            
             <div id="copy-section">
-                <div style="font-size: 13px; font-weight: bold; color: #d32f2f;">কপি করুন এটিই আপনার আইডেনটিটি</div>
-                <button class="btn-copy" id="copyBtn" onclick="copyToClipboard()">Copy Key</button>
+                <div style="font-size: 12px; font-weight: bold; color: #d32f2f;">কপি করুন এটিই আপনার আইডেনটিটি</div>
+                <button style="background:#fbc02d; width:auto; padding:8px 20px;" id="copyBtn" onclick="copyToClipboard()">Copy Key</button>
             </div>
         </div>
     </div>
@@ -107,13 +76,13 @@
 <div id="app">
     <div class="fixed-header">
         <div class="container">
-            <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom: 8px;">
-                <span id="userDisplay">Identity: Loading...</span>
-                <span id="limitDisplay">Posts: 0/10</span>
+            <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:8px;">
+                <span id="userDisplay">Identity: Citizen_...</span>
+                <span style="color: #ffeb3b;">Device Locked: Active</span>
             </div>
             <div style="background:white; padding:12px; border-radius:15px;">
-                <textarea id="postBox" rows="2" placeholder="নতুন কোনো এলার্ট বা তথ্য শেয়ার করুন..."></textarea>
-                <button onclick="sendPost()" style="background:var(--primary); color:white; margin:10px 0 0 0; padding:12px; border-radius:10px;">পোস্ট করুন</button>
+                <textarea id="postBox" rows="2" placeholder="তথ্য শেয়ার করুন..."></textarea>
+                <button onclick="sendPost()" style="background:var(--primary); color:white; margin-top:10px;">পোস্ট করুন</button>
             </div>
         </div>
     </div>
@@ -121,104 +90,112 @@
 </div>
 
 <script>
-    const gun = Gun(['https://gun-manhattan.herokuapp.com/gun']);
+    const gun = Gun(['https://gun-manhattan.herokuapp.com/gun', 'https://peer.wall.org/gun']);
     const sea = Gun.SEA;
+    
+    // ডিভাইস আইডি তৈরির লজিক (যাতে এটি চিনতে পারে এটি কোন ব্রাউজার)
+    const deviceFingerprint = localStorage.getItem('guardian_fingerprint') || Math.random().toString(36).substring(2);
+    localStorage.setItem('guardian_fingerprint', deviceFingerprint);
+
     let myKeys = null;
 
-    // Consent Logic
-    function acceptConsent() {
-        document.getElementById('manual-overlay').style.display = 'none';
-        document.getElementById('auth-screen').style.display = 'flex';
+    window.onload = function() {
+        const savedKey = localStorage.getItem('guardian_session_v2');
+        if(savedKey) {
+            myKeys = JSON.parse(savedKey);
+            showApp();
+        }
     }
 
-    // 10 Second Key Generation
+    function acceptConsent() {
+        document.getElementById('manual-overlay').style.display = 'none';
+        if(!myKeys) document.getElementById('auth-screen').style.display = 'flex';
+    }
+
     async function generateIdentity() {
         const btn = document.getElementById('genBtn');
         const prog = document.getElementById('progress-container');
         const fill = document.getElementById('fill');
-        const percent = document.getElementById('percent');
-        const copySec = document.getElementById('copy-section');
-        
-        btn.disabled = true;
-        prog.style.display = 'block';
-        copySec.style.display = 'none';
-        
+        btn.disabled = true; prog.style.display = 'block';
         let width = 0;
         const interval = setInterval(async () => {
-            width += 1;
-            fill.style.width = width + '%';
-            percent.innerText = width + '%';
-            
+            width += 1; fill.style.width = width + '%';
             if (width >= 100) {
                 clearInterval(interval);
                 const pair = await sea.pair();
                 document.getElementById('keyInput').value = JSON.stringify(pair);
-                copySec.style.display = 'block';
+                document.getElementById('copy-section').style.display = 'block';
                 btn.disabled = false;
             }
-        }, 100); 
+        }, 100);
     }
 
-    // Auto Copy Logic
     function copyToClipboard() {
-        const keyInput = document.getElementById('keyInput');
-        keyInput.select();
-        navigator.clipboard.writeText(keyInput.value);
+        const ki = document.getElementById('keyInput');
+        ki.select(); navigator.clipboard.writeText(ki.value);
         document.getElementById('copyBtn').innerText = "Copied!";
-        document.getElementById('copyBtn').style.background = "#4caf50";
-        document.getElementById('copyBtn').style.color = "white";
     }
 
-    // Login Logic
-    function login() {
+    // লগইন সিকিউরিটি চেক
+    async function login() {
         try {
-            myKeys = JSON.parse(document.getElementById('keyInput').value);
-            document.getElementById('auth-screen').style.display = 'none';
-            document.getElementById('app').style.display = 'block';
-            
-            const nameIdx = Math.abs(hash(myKeys.pub)) % 10000;
-            document.getElementById('userDisplay').innerText = "Identity: Citizen_" + nameIdx;
-            
-            startNetwork();
-        } catch(e) { alert("ভুল কি! দয়া করে সঠিক প্রাইভেট কি ব্যবহার করুন।"); }
+            const btn = document.getElementById('loginBtn');
+            const raw = document.getElementById('keyInput').value;
+            const tempKeys = JSON.parse(raw);
+            btn.innerText = "Checking Lock...";
+            btn.disabled = true;
+
+            // পিটুপি নেটওয়ার্ক থেকে চেক করা হচ্ছে এই আইডিটি অন্য কেউ ব্যবহার করছে কি না
+            gun.get('locks_v2').get(tempKeys.pub).once((data) => {
+                const now = Date.now();
+                const lockTime = 30 * 24 * 60 * 60 * 1000; // ৩০ দিন
+
+                if(data && data.fingerprint !== deviceFingerprint && (now - data.time) < lockTime) {
+                    alert("নিরাপত্তা সতর্কতা: এই আইডিটি বর্তমানে অন্য একটি ডিভাইসে লক করা আছে। ৩০ দিন পার না হওয়া পর্যন্ত অন্য কোথাও এটি ব্যবহার করা যাবে না।");
+                    btn.innerText = "Access Identity";
+                    btn.disabled = false;
+                } else {
+                    // নতুন লগইন বা একই ডিভাইসে লগইন
+                    gun.get('locks_v2').get(tempKeys.pub).put({
+                        fingerprint: deviceFingerprint,
+                        time: now
+                    });
+                    myKeys = tempKeys;
+                    localStorage.setItem('guardian_session_v2', raw);
+                    showApp();
+                }
+            });
+        } catch(e) { 
+            alert("ভুল প্রাইভেট কি!"); 
+            document.getElementById('loginBtn').disabled = false;
+        }
     }
 
-    // Post to Network
+    function showApp() {
+        document.getElementById('auth-screen').style.display = 'none';
+        document.getElementById('manual-overlay').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        document.getElementById('userDisplay').innerText = "Identity: Citizen_" + (myKeys.pub.slice(0,5));
+        startNetwork();
+    }
+
     function sendPost() {
         const val = document.getElementById('postBox').value;
         if(!val) return;
         const time = Date.now();
-        gun.get('ana_abdulloh57_network_v1').set({ 
-            body: val, 
-            author: myKeys.pub, 
-            time: time, 
-            expires: time + (72*3600000) 
-        });
+        gun.get('ana_abdulloh_locked_v2').set({ body: val, author: myKeys.pub, time: time, expires: time + (72*3600000) });
         document.getElementById('postBox').value = "";
     }
 
-    // Listen to Network
     function startNetwork() {
-        gun.get('ana_abdulloh57_network_v1').map().on((data, id) => {
+        gun.get('ana_abdulloh_locked_v2').map().on((data, id) => {
             if(!data || Date.now() > data.expires || document.getElementById(id)) return;
             const div = document.createElement('div');
-            div.id = id; 
-            div.className = 'msg-card';
-            div.innerHTML = `
-                <div class="msg-body">${data.body}</div>
-                <div style="font-size:10px; color:#666; margin-top:12px; border-top:1px solid #eee; padding-top:8px;">
-                    Node: ${data.author.slice(0,12)}...
-                </div>`;
+            div.id = id; div.className = 'msg-card';
+            div.innerHTML = `<div style="white-space:pre-wrap;">${data.body}</div><div style="font-size:10px; color:gray; margin-top:10px;">ID: ${data.author.slice(0,10)}</div>`;
             document.getElementById('feed').insertBefore(div, document.getElementById('feed').firstChild);
         });
     }
-
-    function hash(s) {
-        let h = 0;
-        for(let i=0; i<s.length; i++) h = ((h << 5) - h) + s.charCodeAt(i), h |= 0;
-        return h;
-    }
 </script>
 </body>
-  </html>
-  
+</html>

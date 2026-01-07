@@ -37,25 +37,31 @@
         .container { max-width: 600px; margin: auto; padding: 0 15px; }
         .msg-card { background: white; padding: 18px; margin-bottom: 15px; border-radius: 12px; border-left: 6px solid var(--primary); box-shadow: 0 3px 10px rgba(0,0,0,0.05); word-wrap: break-word; }
         textarea { width: 100%; border: 1px solid #ddd; border-radius: 10px; padding: 12px; resize: none; font-family: inherit; box-sizing: border-box; }
+        
+        .trust-btn { 
+            background: #e0f2f1; color: var(--primary); width: auto; 
+            padding: 5px 15px; font-size: 12px; border: 1px solid var(--primary); 
+            display: inline-block; margin-top: 10px; border-radius: 20px;
+        }
     </style>
 </head>
 <body>
 
 <div id="manual-overlay">
     <div class="manual-box">
-        <h2 style="margin-top:0; color: var(--primary);">Network Guide & Purpose</h2>
-        <p>Decentralized information network. No central server, no censorship. Target: Emergency info sharing.</p>
+        <h2 style="margin-top:0; color: var(--primary);">📖 নেটওয়ার্ক নির্দেশিকা ও উদ্দেশ্য</h2>
+        <p><b>উদ্দেশ্য:</b> এটি একটি বিকেন্দ্রীভূত (Decentralized) ইনফরমেশন নেটওয়ার্ক। কোনো কেন্দ্রীয় সার্ভার না থাকায় এখানে আপনার তথ্য নিরাপদ এবং সেন্সরশিপ মুক্ত। জরুরি মুহূর্তে সঠিক তথ্য প্রচার করাই এর লক্ষ্য।</p>
         <ul style="font-size: 14px; line-height: 1.7;">
-            <li><b>Identity:</b> Private Key is your only ID.</li>
-            <li><b>Device Lock:</b> Locked for 30 days upon login.</li>
-            <li><b>Auto-Delete:</b> Posts vanish after 72 hours.</li>
-            <li><b>Power:</b> High Trust Score increases post limits.</li>
+            <li><b>আইডেন্টিটি:</b> আপনার 'প্রাইভেট কি'-ই আপনার একমাত্র পরিচয়। এটি হারিয়ে ফেললে অ্যাকাউন্ট ফিরে পাওয়া সম্ভব নয়।</li>
+            <li><b>ডিভাইস লক:</b> নিরাপত্তার স্বার্থে একবার লগইন করলে একাউন্টটি ৩০ দিনের জন্য এই ডিভাইসে সংরক্ষিত থাকবে।</li>
+            <li><b>অটো ডিলিট:</b> নেটওয়ার্ক পরিষ্কার রাখতে প্রতিটি মেসেজ ৭২ ঘণ্টা পর স্বয়ংক্রিয়ভাবে মুছে যাবে।</li>
+            <li><b>ব্যবহারকারীর ক্ষমতা:</b> ভালো তথ্যে 'Trust' দিন। ট্রাস্ট স্কোর বাড়লে আপনার দৈনিক পোস্ট করার সীমা বৃদ্ধি পাবে।</li>
         </ul>
         <div style="text-align: right; font-weight: bold; margin-top: 15px; border-top: 1px dashed #b2dfdb; padding-top: 10px; color: var(--primary);">
-            — Master ID: ana abdulloh57
+            — মেসেজটি করেছেন: Ana Abdulloh57
         </div>
+        <button class="btn-main" style="max-width:450px; margin-top:20px;" onclick="acceptConsent()">I Accept</button>
     </div>
-    <button class="btn-main" style="max-width:450px; margin-top:20px;" onclick="acceptConsent()">I Accept</button>
 </div>
 
 <div id="auth-screen">
@@ -91,7 +97,6 @@
 </div>
 
 <script>
-    // Initializing Gun with multiple relays for redundancy
     const gun = Gun(['https://gun-manhattan.herokuapp.com/gun', 'https://peer.wall.org/gun']);
     const sea = Gun.SEA;
     
@@ -100,36 +105,26 @@
 
     let myKeys = null;
 
-    window.onload = function() {
-        const savedKey = localStorage.getItem('guardian_session_v2');
-        if(savedKey) {
-            try {
-                myKeys = JSON.parse(savedKey);
-                showApp();
-            } catch(e) {
-                localStorage.removeItem('guardian_session_v2');
-            }
-        }
+    const savedKey = localStorage.getItem('guardian_session_v2');
+    if(savedKey) {
+        try { myKeys = JSON.parse(savedKey); } catch(e) {}
     }
 
     function acceptConsent() {
         document.getElementById('manual-overlay').style.display = 'none';
-        if(!myKeys) document.getElementById('auth-screen').style.display = 'flex';
+        if(myKeys) showApp();
+        else document.getElementById('auth-screen').style.display = 'flex';
     }
 
     async function generateIdentity() {
         const btn = document.getElementById('genBtn');
         const prog = document.getElementById('progress-container');
         const fill = document.getElementById('fill');
-        btn.disabled = true; 
-        prog.style.display = 'block';
-        
+        btn.disabled = true; prog.style.display = 'block';
         let width = 0;
         const pair = await sea.pair();
-        
         const interval = setInterval(() => {
-            width += 2; 
-            fill.style.width = width + '%';
+            width += 2; fill.style.width = width + '%';
             if (width >= 100) {
                 clearInterval(interval);
                 document.getElementById('keyInput').value = JSON.stringify(pair);
@@ -141,45 +136,29 @@
 
     function copyToClipboard() {
         const ki = document.getElementById('keyInput');
-        ki.select(); 
-        navigator.clipboard.writeText(ki.value);
+        ki.select(); navigator.clipboard.writeText(ki.value);
         document.getElementById('copyBtn').innerText = "Copied!";
     }
 
     async function login() {
         const btn = document.getElementById('loginBtn');
         const raw = document.getElementById('keyInput').value;
-        
         if(!raw) return alert("Please enter a key.");
-
         try {
             const tempKeys = JSON.parse(raw);
-            btn.innerText = "Checking Lock...";
-            btn.disabled = true;
-
+            btn.innerText = "Checking Lock..."; btn.disabled = true;
             gun.get('locks_v2').get(tempKeys.pub).once((data) => {
                 const now = Date.now();
-                const lockTime = 30 * 24 * 60 * 60 * 1000; 
-
-                if(data && data.fingerprint !== deviceFingerprint && (now - data.time) < lockTime) {
-                    alert("Security Alert: Identity locked to another device for 30 days.");
-                    btn.innerText = "Access Identity";
-                    btn.disabled = false;
+                if(data && data.fingerprint !== deviceFingerprint && (now - data.time) < (30 * 24 * 3600000)) {
+                    alert("Security Alert: Identity locked to another device.");
+                    btn.innerText = "Access Identity"; btn.disabled = false;
                 } else {
-                    gun.get('locks_v2').get(tempKeys.pub).put({
-                        fingerprint: deviceFingerprint,
-                        time: now
-                    });
-                    myKeys = tempKeys;
-                    localStorage.setItem('guardian_session_v2', raw);
+                    gun.get('locks_v2').get(tempKeys.pub).put({ fingerprint: deviceFingerprint, time: now });
+                    myKeys = tempKeys; localStorage.setItem('guardian_session_v2', raw);
                     showApp();
                 }
             });
-        } catch(e) { 
-            alert("Invalid Private Key format!"); 
-            btn.disabled = false;
-            btn.innerText = "Access Identity";
-        }
+        } catch(e) { alert("Invalid Private Key!"); btn.disabled = false; btn.innerText = "Access Identity"; }
     }
 
     function showApp() {
@@ -193,35 +172,42 @@
     function sendPost() {
         const val = document.getElementById('postBox').value.trim();
         if(!val) return;
-        
         const time = Date.now();
-        const postData = { 
-            body: val, 
-            author: myKeys.pub, 
-            time: time, 
-            expires: time + (72 * 3600000) 
-        };
-
-        gun.get('ana_abdulloh_locked_v2').set(postData);
+        gun.get('ana_abdulloh_locked_v3').set({ 
+            body: val, author: myKeys.pub, time: time, expires: time + (72 * 3600000) 
+        });
         document.getElementById('postBox').value = "";
+    }
+
+    function giveTrust(postId) {
+        const post = gun.get('ana_abdulloh_locked_v3').get(postId);
+        post.get('trust').get(myKeys.pub).put(true);
     }
 
     function startNetwork() {
         const feedContainer = document.getElementById('feed');
-        gun.get('ana_abdulloh_locked_v2').map().on((data, id) => {
-            if(!data || !data.body || Date.now() > data.expires || document.getElementById(id)) return;
+        gun.get('ana_abdulloh_locked_v3').map().on((data, id) => {
+            if(!data || !data.body || Date.now() > data.expires) return;
             
-            const div = document.createElement('div');
-            div.id = id; 
-            div.className = 'msg-card';
-            div.innerHTML = `
-                <div style="white-space:pre-wrap; font-size:15px; color:#1a1a1a;">${data.body}</div>
+            let card = document.getElementById(id);
+            if(!card) {
+                card = document.createElement('div');
+                card.id = id; card.className = 'msg-card';
+                feedContainer.insertBefore(card, feedContainer.firstChild);
+            }
+            
+            // Count Trust
+            let trustCount = 0;
+            gun.get('ana_abdulloh_locked_v3').get(id).get('trust').map().on((t) => { if(t) trustCount++; });
+
+            card.innerHTML = `
+                <div style="white-space:pre-wrap; font-size:15px;">${data.body}</div>
                 <div style="font-size:10px; color:#888; margin-top:12px; border-top:1px solid #eee; padding-top:5px;">
-                    Source: ${data.author.slice(0,12)}... | ${new Date(data.time).toLocaleTimeString()}
-                </div>`;
-            feedContainer.insertBefore(div, feedContainer.firstChild);
+                    Source: ${data.author.slice(0,10)}... | ${new Date(data.time).toLocaleTimeString()}
+                </div>
+                <button class="trust-btn" onclick="giveTrust('${id}')">Trust (${trustCount})</button>`;
         });
     }
 </script>
 </body>
-</html>
+</html>                                                                                                             

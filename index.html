@@ -4,113 +4,81 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Guardian Network | Ana Abdulloh57</title>
-    
     <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gun/lib/webrtc.js"></script>
 
     <style>
         :root { --primary: #004d40; --secondary: #00695c; --bg: #f4f7f6; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; color: #333; }
-
-        /* Overlays */
-        #manual-overlay, #auth-screen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: white; z-index: 3000; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; padding: 20px; box-sizing: border-box;
-        }
-        #auth-screen { display: none; z-index: 2500; background: var(--bg); }
-
-        .auth-card, .manual-box {
-            width: 95%; max-width: 500px; background: white; padding: 30px; 
-            border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-        .manual-box { border-left: 10px solid var(--primary); }
-
-        /* UI Elements */
-        input, textarea { width: 100%; padding: 14px; margin-bottom: 15px; border-radius: 10px; border: 1px solid #ccc; box-sizing: border-box; outline: none; font-size: 16px; }
-        button { width: 100%; padding: 14px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; margin-bottom: 10px; font-size: 16px; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; color: #333; }
+        #manual-overlay, #auth-screen { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 3000; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
+        #auth-screen { display: none; z-index: 2500; }
+        .auth-card, .manual-box { width: 95%; max-width: 450px; background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }
+        .manual-box { background: #e0f2f1; border-left: 10px solid var(--primary); }
+        input, textarea { width: 100%; padding: 14px; margin-bottom: 15px; border-radius: 10px; border: 1px solid #ccc; box-sizing: border-box; outline: none; }
+        button { width: 100%; padding: 14px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; margin-bottom: 10px; }
         .btn-main { background: var(--primary); color: white; }
-        .btn-main:hover { background: var(--secondary); }
-
-        /* App Layout */
-        #app { display: none; padding-top: 240px; }
-        .fixed-header { position: fixed; top: 0; width: 100%; background: var(--primary); color: white; z-index: 1000; padding: 15px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        #app { display: none; padding-top: 250px; }
+        .fixed-header { position: fixed; top: 0; width: 100%; background: var(--primary); color: white; z-index: 1000; padding: 15px 0; }
         .container { max-width: 600px; margin: auto; padding: 0 15px; }
-        
         .msg-card { background: white; padding: 18px; margin-bottom: 15px; border-radius: 12px; border-left: 6px solid var(--primary); box-shadow: 0 3px 10px rgba(0,0,0,0.05); }
-        .trust-btn { background: #e0f2f1; color: var(--primary); width: auto; padding: 6px 16px; font-size: 13px; border: 1px solid var(--primary); border-radius: 20px; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div id="manual-overlay">
     <div class="manual-box">
-        <h2 style="color: var(--primary); margin-top: 0;">📖 নেটওয়ার্ক নির্দেশিকা ও উদ্দেশ্য</h2>
-        <p><b>উদ্দেশ্য:</b> এটি একটি বিকেন্দ্রীভূত (Decentralized) নেটওয়ার্ক। এখানে কোনো কেন্দ্রীয় সার্ভার নেই, তাই আপনার তথ্য নিরাপদ এবং সেন্সরশিপ মুক্ত।</p>
-        <ul style="font-size: 14px; line-height: 1.8;">
-            <li><b>আইডেন্টিটি:</b> আপনার 'প্রাইভেট কি'-ই একমাত্র পরিচয়। এটি হারাবেন না।</li>
-            <li><b>নিরাপত্তা:</b> একাউন্টটি ৩০ দিনের জন্য এই ডিভাইসে সংরক্ষিত থাকবে।</li>
-            <li><b>অটো ডিলিট:</b> প্রতিটি মেসেজ ৭২ ঘণ্টা পর স্বয়ংক্রিয়ভাবে মুছে যাবে।</li>
-            <li><b>ট্রাস্ট:</b> ভালো তথ্যে 'Trust' দিন। এতে তথ্যের নির্ভরযোগ্যতা বাড়ে।</li>
+        <h2 style="margin-top:0; color: var(--primary);">📖 নেটওয়ার্ক নির্দেশিকা ও উদ্দেশ্য</h2>
+        <p><b>উদ্দেশ্য:</b> এটি একটি বিকেন্দ্রীভূত (Decentralized) ইনফরমেশন নেটওয়ার্ক। কোনো কেন্দ্রীয় সার্ভার না থাকায় আপনার তথ্য নিরাপদ।</p>
+        <ul style="font-size: 14px; line-height: 1.7;">
+            <li><b>আইডেন্টিটি:</b> আপনার 'প্রাইভেট কি' হারাবেন না।</li>
+            <li><b>অটো ডিলিট:</b> মেসেজ ৭২ ঘণ্টা পর মুছে যাবে।</li>
         </ul>
-        <div style="text-align: right; font-size: 12px; color: var(--primary); margin-bottom: 10px;">— Admin: Ana Abdulloh57</div>
-        <button class="btn-main" onclick="acceptConsent()">I Accept & Continue</button>
+        <div style="text-align: right; font-weight: bold; color: var(--primary);">— Ana Abdulloh57</div>
+        <button class="btn-main" onclick="acceptConsent()">I Accept</button>
     </div>
 </div>
 
 <div id="auth-screen">
     <div class="auth-card">
-        <h1 style="text-align: center; color: var(--primary);">Identity Access</h1>
-        <p style="text-align: center; font-size: 14px; color: #666;">Enter your Private Key to join the network.</p>
-        <input type="text" id="keyInput" placeholder="Paste your Private Key here...">
-        <button class="btn-main" id="loginBtn" onclick="login()">Access Identity</button>
-        <button style="background: #eee; color: #333;" id="genBtn" onclick="generateIdentity()">Create New Identity</button>
+        <h1>Identity Access</h1>
+        <input type="text" id="keyInput" placeholder="Enter Private Key...">
+        <button class="btn-main" onclick="login()">Access Identity</button>
+        <button style="background: #e0e0e0;" onclick="generateIdentity()">Create New ID</button>
     </div>
 </div>
 
 <div id="app">
     <div class="fixed-header">
         <div class="container">
-            <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:10px;">
-                <span id="userDisplay">Identity: Connecting...</span>
-                <span style="color: #80cbc4;">Network: Relay + WebRTC Active</span>
+            <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:8px;">
+                <span id="userDisplay">Identity: Loading...</span>
+                <span style="color: #ffeb3b;">Network: Relay + WebRTC Active</span>
             </div>
-            <div style="background:white; padding:15px; border-radius:15px;">
-                <textarea id="postBox" rows="2" placeholder="Share urgent information with the network..."></textarea>
-                <button onclick="sendPost()" style="background:var(--primary); color:white; margin:0;">Broadcast Information</button>
+            <div style="background:white; padding:12px; border-radius:15px;">
+                <textarea id="postBox" rows="2" placeholder="Share information..."></textarea>
+                <button onclick="sendPost()" style="background:var(--primary); color:white; margin-top:10px;">Broadcast Post</button>
             </div>
         </div>
     </div>
-    <div class="container" id="feed">
-        </div>
+    <div class="container" id="feed" style="margin-top: 20px;"></div>
 </div>
 
 <script>
-    // Initialize Gun with Multiple Relays and WebRTC ICE Servers
+    // Added WebRTC and more reliable peers
     const gun = Gun({
         peers: [
             'https://gun-manhattan.herokuapp.com/gun',
             'https://relay.cactus.chat:443/gun',
             'https://peer.wall.org/gun'
         ],
-        rtc: {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:stun.services.mozilla.com' }
-            ]
-        }
+        rtc: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] }
     });
-
     const sea = Gun.SEA;
     let myKeys = null;
 
-    // Check for saved session
-    const savedSession = localStorage.getItem('guardian_session_v3');
-    if(savedSession) {
-        try { myKeys = JSON.parse(savedSession); } catch(e) { console.error("Session Error"); }
-    }
+    const savedKey = localStorage.getItem('guardian_session_v3');
+    if(savedKey) { try { myKeys = JSON.parse(savedKey); } catch(e) {} }
 
     function acceptConsent() {
         document.getElementById('manual-overlay').style.display = 'none';
@@ -119,95 +87,57 @@
     }
 
     async function generateIdentity() {
-        const btn = document.getElementById('genBtn');
-        btn.innerText = "Generating..."; btn.disabled = true;
         const pair = await sea.pair();
         document.getElementById('keyInput').value = JSON.stringify(pair);
-        btn.innerText = "Identity Created!"; btn.disabled = false;
-        alert("CRITICAL: Copy this key and save it. You cannot recover your account without it.");
+        alert("Copy and save this key!");
     }
 
-    function login() {
+    async function login() {
         const raw = document.getElementById('keyInput').value;
-        if(!raw) return alert("Please enter a valid key.");
         try {
             myKeys = JSON.parse(raw);
             localStorage.setItem('guardian_session_v3', raw);
             showApp();
-        } catch(e) { alert("Invalid Private Key format."); }
+        } catch(e) { alert("Invalid Key!"); }
     }
 
     function showApp() {
         document.getElementById('auth-screen').style.display = 'none';
         document.getElementById('app').style.display = 'block';
-        document.getElementById('userDisplay').innerText = "Identity: Citizen_" + myKeys.pub.slice(0,8);
+        document.getElementById('userDisplay').innerText = "ID: " + (myKeys.pub.slice(0,8));
         startNetwork();
     }
 
     function sendPost() {
-        const body = document.getElementById('postBox').value.trim();
-        if(!body) return;
-
+        const val = document.getElementById('postBox').value.trim();
+        if(!val) return;
         const time = Date.now();
-        const postData = {
-            body: body,
-            author: myKeys.pub,
-            time: time,
-            expires: time + (72 * 60 * 60 * 1000) // 72 Hours
-        };
-
-        // Saving to a robust network path
-        gun.get('guardian_v7_main').set(postData);
+        // Updated data node to avoid previous sync issues
+        gun.get('guardian_final_v1').set({ 
+            body: val, author: myKeys.pub, time: time, expires: time + (72 * 3600000) 
+        });
         document.getElementById('postBox').value = "";
-    }
-
-    function giveTrust(postId) {
-        // Direct trust signaling via WebRTC/Relay
-        gun.get('guardian_v7_main').get(postId).get('trust').get(myKeys.pub).put(true);
     }
 
     function startNetwork() {
         const feed = document.getElementById('feed');
-        
-        // Listen for all incoming data
-        gun.get('guardian_v7_main').map().on((data, id) => {
-            if(!data || !data.body) return;
+        gun.get('guardian_final_v1').map().on((data, id) => {
+            if(!data || !data.body || Date.now() > data.expires) return;
             
-            // Auto-cleanup check
-            if(Date.now() > data.expires) {
-                const old = document.getElementById(id);
-                if(old) old.remove();
-                return;
-            }
-
-            // Create or Update Message Card
             let card = document.getElementById(id);
             if(!card) {
                 card = document.createElement('div');
-                card.id = id;
-                card.className = 'msg-card';
-                feed.prepend(card); // Newest messages on top
+                card.id = id; card.className = 'msg-card';
+                feed.prepend(card);
             }
-
-            // Trust Counter (Real-time)
-            gun.get('guardian_v7_main').get(id).get('trust').on((tData) => {
-                let count = 0;
-                if(tData) {
-                    Object.keys(tData).forEach(k => { if(tData[k] === true) count++; });
-                }
-                
-                card.innerHTML = `
-                    <div style="font-size:16px; line-height:1.5;">${data.body}</div>
-                    <div style="font-size:11px; color:#777; margin-top:12px; border-top:1px solid #eee; padding-top:8px; display:flex; justify-content:space-between;">
-                        <span>Source: ${data.author.slice(0,12)}...</span>
-                        <span>${new Date(data.time).toLocaleTimeString()}</span>
-                    </div>
-                    <button class="trust-btn" onclick="giveTrust('${id}')">Trust Count: ${count}</button>
-                `;
-            });
+            
+            card.innerHTML = `
+                <div style="white-space:pre-wrap;">${data.body}</div>
+                <div style="font-size:10px; color:#888; margin-top:10px; border-top:1px solid #eee; padding-top:5px;">
+                    Source: ${data.author.slice(0,10)}... | ${new Date(data.time).toLocaleTimeString()}
+                </div>`;
         });
     }
 </script>
-
 </body>
 </html>

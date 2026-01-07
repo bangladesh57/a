@@ -97,124 +97,53 @@
 </div>
 
 <script>
-    // Updated with multi-relay for better global sync
+    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
+
+<script>
+    // Using a more robust set of public relays
     const gun = Gun([
         'https://gun-manhattan.herokuapp.com/gun',
-        'https://gun-us.herokuapp.com/gun',
         'https://peer.wall.org/gun',
-        'https://gundb-relay.herokuapp.com/gun'
+        'https://relay.cactus.chat:443/gun',
+        'https://gun-us.herokuapp.com/gun'
     ]);
+
     const sea = Gun.SEA;
-    
-    const deviceFingerprint = localStorage.getItem('guardian_fingerprint') || Math.random().toString(36).substring(2);
-    localStorage.setItem('guardian_fingerprint', deviceFingerprint);
 
-    let myKeys = null;
-
-    const savedKey = localStorage.getItem('guardian_session_v2');
-    if(savedKey) {
-        try { myKeys = JSON.parse(savedKey); } catch(e) {}
-    }
-
-    function acceptConsent() {
-        document.getElementById('manual-overlay').style.display = 'none';
-        if(myKeys) showApp();
-        else document.getElementById('auth-screen').style.display = 'flex';
-    }
-
-    async function generateIdentity() {
-        const btn = document.getElementById('genBtn');
-        const prog = document.getElementById('progress-container');
-        const fill = document.getElementById('fill');
-        btn.disabled = true; prog.style.display = 'block';
-        let width = 0;
-        const pair = await sea.pair();
-        const interval = setInterval(() => {
-            width += 2; fill.style.width = width + '%';
-            if (width >= 100) {
-                clearInterval(interval);
-                document.getElementById('keyInput').value = JSON.stringify(pair);
-                document.getElementById('copy-section').style.display = 'block';
-                btn.disabled = false;
-            }
-        }, 100);
-    }
-
-    function copyToClipboard() {
-        const ki = document.getElementById('keyInput');
-        ki.select(); navigator.clipboard.writeText(ki.value);
-        document.getElementById('copyBtn').innerText = "Copied!";
-    }
-
-    async function login() {
-        const btn = document.getElementById('loginBtn');
-        const raw = document.getElementById('keyInput').value;
-        if(!raw) return alert("Please enter a key.");
-        try {
-            const tempKeys = JSON.parse(raw);
-            btn.innerText = "Checking Lock..."; btn.disabled = true;
-            gun.get('locks_v3').get(tempKeys.pub).once((data) => {
-                const now = Date.now();
-                if(data && data.fingerprint !== deviceFingerprint && (now - data.time) < (30 * 24 * 3600000)) {
-                    alert("Security Alert: Identity locked to another device.");
-                    btn.innerText = "Access Identity"; btn.disabled = false;
-                } else {
-                    gun.get('locks_v3').get(tempKeys.pub).put({ fingerprint: deviceFingerprint, time: now });
-                    myKeys = tempKeys; localStorage.setItem('guardian_session_v2', raw);
-                    showApp();
-                }
-            });
-        } catch(e) { alert("Invalid Private Key!"); btn.disabled = false; btn.innerText = "Access Identity"; }
-    }
-
-    function showApp() {
-        document.getElementById('auth-screen').style.display = 'none';
-        document.getElementById('manual-overlay').style.display = 'none';
-        document.getElementById('app').style.display = 'block';
-        document.getElementById('userDisplay').innerText = "Identity: Citizen_" + (myKeys.pub.slice(0,8));
-        startNetwork();
-    }
-
-    function sendPost() {
-        const val = document.getElementById('postBox').value.trim();
-        if(!val) return;
-        const time = Date.now();
-        // Using a fresh path for guaranteed sync
-        gun.get('guardian_network_v5').set({ 
-            body: val, author: myKeys.pub, time: time, expires: time + (72 * 3600000) 
-        });
-        document.getElementById('postBox').value = "";
-    }
-
-    function giveTrust(postId) {
-        // Trust link to the unique post
-        gun.get('guardian_network_v5').get(postId).get('trust').get(myKeys.pub).put(true);
-    }
-
+    // Fixed StartNetwork Function for better sync
     function startNetwork() {
         const feedContainer = document.getElementById('feed');
+        
+        // Use a specific node for messages to ensure direct mapping
         gun.get('guardian_network_v5').map().on((data, id) => {
-            if(!data || !data.body || Date.now() > data.expires) return;
-            
+            // Check if data exists and is not expired
+            if(!data || !data.body) return;
+            if(data.expires && Date.now() > data.expires) return;
+
             let card = document.getElementById(id);
             if(!card) {
                 card = document.createElement('div');
-                card.id = id; card.className = 'msg-card';
-                feedContainer.insertBefore(card, feedContainer.firstChild);
+                card.id = id;
+                card.className = 'msg-card';
+                // Insert at the top for real-time feel
+                feedContainer.prepend(card);
             }
 
-            // Real-time Trust listener
+            // Simplified trust listener to prevent UI flickering
             gun.get('guardian_network_v5').get(id).get('trust').on((tData) => {
                 let trustCount = 0;
                 if(tData) {
-                    // Count all positive trust signals
-                    Object.keys(tData).forEach(k => { if(tData[k] === true) trustCount++; });
+                    Object.keys(tData).forEach(k => { 
+                        if(tData[k] === true) trustCount++; 
+                    });
                 }
                 
+                // Content update without breaking the DOM node
                 card.innerHTML = `
                     <div style="white-space:pre-wrap; font-size:15px; color:#1a1a1a;">${data.body}</div>
                     <div style="font-size:10px; color:#888; margin-top:12px; border-top:1px solid #eee; padding-top:5px;">
-                        Source: ${data.author.slice(0,10)}... | ${new Date(data.time).toLocaleTimeString()}
+                        Source: ${data.author ? data.author.slice(0,10) : 'Unknown'}... | ${new Date(data.time).toLocaleTimeString()}
                     </div>
                     <button class="trust-btn" onclick="giveTrust('${id}')">Trust (${trustCount})</button>`;
             });

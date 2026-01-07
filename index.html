@@ -85,7 +85,7 @@
         <div class="container">
             <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:8px;">
                 <span id="userDisplay">Identity: Loading...</span>
-                <span style="color: #ffeb3b;">Device Locked: Active</span>
+                <span style="color: #ffeb3b;">System: Decentralized Sync Active</span>
             </div>
             <div style="background:white; padding:12px; border-radius:15px;">
                 <textarea id="postBox" rows="2" placeholder="Share information..."></textarea>
@@ -97,7 +97,13 @@
 </div>
 
 <script>
-    const gun = Gun(['https://gun-manhattan.herokuapp.com/gun', 'https://peer.wall.org/gun']);
+    // Updated with multi-relay for better global sync
+    const gun = Gun([
+        'https://gun-manhattan.herokuapp.com/gun',
+        'https://gun-us.herokuapp.com/gun',
+        'https://peer.wall.org/gun',
+        'https://gundb-relay.herokuapp.com/gun'
+    ]);
     const sea = Gun.SEA;
     
     const deviceFingerprint = localStorage.getItem('guardian_fingerprint') || Math.random().toString(36).substring(2);
@@ -147,13 +153,13 @@
         try {
             const tempKeys = JSON.parse(raw);
             btn.innerText = "Checking Lock..."; btn.disabled = true;
-            gun.get('locks_v2').get(tempKeys.pub).once((data) => {
+            gun.get('locks_v3').get(tempKeys.pub).once((data) => {
                 const now = Date.now();
                 if(data && data.fingerprint !== deviceFingerprint && (now - data.time) < (30 * 24 * 3600000)) {
                     alert("Security Alert: Identity locked to another device.");
                     btn.innerText = "Access Identity"; btn.disabled = false;
                 } else {
-                    gun.get('locks_v2').get(tempKeys.pub).put({ fingerprint: deviceFingerprint, time: now });
+                    gun.get('locks_v3').get(tempKeys.pub).put({ fingerprint: deviceFingerprint, time: now });
                     myKeys = tempKeys; localStorage.setItem('guardian_session_v2', raw);
                     showApp();
                 }
@@ -173,20 +179,21 @@
         const val = document.getElementById('postBox').value.trim();
         if(!val) return;
         const time = Date.now();
-        gun.get('ana_abdulloh_locked_v3').set({ 
+        // Using a fresh path for guaranteed sync
+        gun.get('guardian_network_v5').set({ 
             body: val, author: myKeys.pub, time: time, expires: time + (72 * 3600000) 
         });
         document.getElementById('postBox').value = "";
     }
 
     function giveTrust(postId) {
-        const post = gun.get('ana_abdulloh_locked_v3').get(postId);
-        post.get('trust').get(myKeys.pub).put(true);
+        // Trust link to the unique post
+        gun.get('guardian_network_v5').get(postId).get('trust').get(myKeys.pub).put(true);
     }
 
     function startNetwork() {
         const feedContainer = document.getElementById('feed');
-        gun.get('ana_abdulloh_locked_v3').map().on((data, id) => {
+        gun.get('guardian_network_v5').map().on((data, id) => {
             if(!data || !data.body || Date.now() > data.expires) return;
             
             let card = document.getElementById(id);
@@ -195,19 +202,24 @@
                 card.id = id; card.className = 'msg-card';
                 feedContainer.insertBefore(card, feedContainer.firstChild);
             }
-            
-            // Count Trust
-            let trustCount = 0;
-            gun.get('ana_abdulloh_locked_v3').get(id).get('trust').map().on((t) => { if(t) trustCount++; });
 
-            card.innerHTML = `
-                <div style="white-space:pre-wrap; font-size:15px;">${data.body}</div>
-                <div style="font-size:10px; color:#888; margin-top:12px; border-top:1px solid #eee; padding-top:5px;">
-                    Source: ${data.author.slice(0,10)}... | ${new Date(data.time).toLocaleTimeString()}
-                </div>
-                <button class="trust-btn" onclick="giveTrust('${id}')">Trust (${trustCount})</button>`;
+            // Real-time Trust listener
+            gun.get('guardian_network_v5').get(id).get('trust').on((tData) => {
+                let trustCount = 0;
+                if(tData) {
+                    // Count all positive trust signals
+                    Object.keys(tData).forEach(k => { if(tData[k] === true) trustCount++; });
+                }
+                
+                card.innerHTML = `
+                    <div style="white-space:pre-wrap; font-size:15px; color:#1a1a1a;">${data.body}</div>
+                    <div style="font-size:10px; color:#888; margin-top:12px; border-top:1px solid #eee; padding-top:5px;">
+                        Source: ${data.author.slice(0,10)}... | ${new Date(data.time).toLocaleTimeString()}
+                    </div>
+                    <button class="trust-btn" onclick="giveTrust('${id}')">Trust (${trustCount})</button>`;
+            });
         });
     }
 </script>
 </body>
-</html>                                                                                                             
+</html>

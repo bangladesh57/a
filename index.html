@@ -4,12 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Guardian Network | Ana Abdulloh57</title>
+    
     <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gun/lib/webrtc.js"></script>
+
     <style>
         :root { --primary: #004d40; --secondary: #00695c; --bg: #f4f7f6; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); margin: 0; color: #333; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; color: #333; }
 
+        /* Overlays */
         #manual-overlay, #auth-screen {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: white; z-index: 3000; display: flex; flex-direction: column;
@@ -18,137 +22,192 @@
         #auth-screen { display: none; z-index: 2500; background: var(--bg); }
 
         .auth-card, .manual-box {
-            width: 95%; max-width: 450px; background: white; padding: 30px; 
-            border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1); text-align: center;
+            width: 95%; max-width: 500px; background: white; padding: 30px; 
+            border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
         }
-        .manual-box { background: #e0f2f1; border-left: 10px solid var(--primary); text-align: left; }
+        .manual-box { border-left: 10px solid var(--primary); }
 
-        input { width: 100%; padding: 14px; margin-bottom: 15px; border-radius: 10px; border: 1px solid #ccc; box-sizing: border-box; outline: none; }
-        button { width: 100%; padding: 14px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; margin-bottom: 10px; }
+        /* UI Elements */
+        input, textarea { width: 100%; padding: 14px; margin-bottom: 15px; border-radius: 10px; border: 1px solid #ccc; box-sizing: border-box; outline: none; font-size: 16px; }
+        button { width: 100%; padding: 14px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; margin-bottom: 10px; font-size: 16px; }
         .btn-main { background: var(--primary); color: white; }
+        .btn-main:hover { background: var(--secondary); }
 
-        #progress-container { display: none; margin-top: 15px; }
-        .progress-bar { width: 100%; height: 8px; background: #eee; border-radius: 10px; overflow: hidden; }
-        .progress-fill { height: 100%; background: var(--secondary); width: 0%; transition: linear; }
-        #copy-section { display: none; margin-top: 15px; background: #fff9c4; padding: 10px; border-radius: 8px; border: 1px dashed #fbc02d; }
-
-        #app { display: none; padding-top: 250px; }
-        .fixed-header { position: fixed; top: 0; width: 100%; background: var(--primary); color: white; z-index: 1000; padding: 15px 0; }
+        /* App Layout */
+        #app { display: none; padding-top: 240px; }
+        .fixed-header { position: fixed; top: 0; width: 100%; background: var(--primary); color: white; z-index: 1000; padding: 15px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
         .container { max-width: 600px; margin: auto; padding: 0 15px; }
-        .msg-card { background: white; padding: 18px; margin-bottom: 15px; border-radius: 12px; border-left: 6px solid var(--primary); box-shadow: 0 3px 10px rgba(0,0,0,0.05); word-wrap: break-word; }
-        textarea { width: 100%; border: 1px solid #ddd; border-radius: 10px; padding: 12px; resize: none; font-family: inherit; box-sizing: border-box; }
         
-        .trust-btn { 
-            background: #e0f2f1; color: var(--primary); width: auto; 
-            padding: 5px 15px; font-size: 12px; border: 1px solid var(--primary); 
-            display: inline-block; margin-top: 10px; border-radius: 20px;
-        }
+        .msg-card { background: white; padding: 18px; margin-bottom: 15px; border-radius: 12px; border-left: 6px solid var(--primary); box-shadow: 0 3px 10px rgba(0,0,0,0.05); }
+        .trust-btn { background: #e0f2f1; color: var(--primary); width: auto; padding: 6px 16px; font-size: 13px; border: 1px solid var(--primary); border-radius: 20px; cursor: pointer; }
     </style>
 </head>
 <body>
 
 <div id="manual-overlay">
     <div class="manual-box">
-        <h2 style="margin-top:0; color: var(--primary);">📖 নেটওয়ার্ক নির্দেশিকা ও উদ্দেশ্য</h2>
-        <p><b>উদ্দেশ্য:</b> এটি একটি বিকেন্দ্রীভূত (Decentralized) ইনফরমেশন নেটওয়ার্ক। কোনো কেন্দ্রীয় সার্ভার না থাকায় এখানে আপনার তথ্য নিরাপদ এবং সেন্সরশিপ মুক্ত। জরুরি মুহূর্তে সঠিক তথ্য প্রচার করাই এর লক্ষ্য।</p>
-        <ul style="font-size: 14px; line-height: 1.7;">
-            <li><b>আইডেন্টিটি:</b> আপনার 'প্রাইভেট কি'-ই আপনার একমাত্র পরিচয়। এটি হারিয়ে ফেললে অ্যাকাউন্ট ফিরে পাওয়া সম্ভব নয়।</li>
-            <li><b>ডিভাইস লক:</b> নিরাপত্তার স্বার্থে একবার লগইন করলে একাউন্টটি ৩০ দিনের জন্য এই ডিভাইসে সংরক্ষিত থাকবে।</li>
-            <li><b>অটো ডিলিট:</b> নেটওয়ার্ক পরিষ্কার রাখতে প্রতিটি মেসেজ ৭২ ঘণ্টা পর স্বয়ংক্রিয়ভাবে মুছে যাবে।</li>
-            <li><b>ব্যবহারকারীর ক্ষমতা:</b> ভালো তথ্যে 'Trust' দিন। ট্রাস্ট স্কোর বাড়লে আপনার দৈনিক পোস্ট করার সীমা বৃদ্ধি পাবে।</li>
+        <h2 style="color: var(--primary); margin-top: 0;">📖 নেটওয়ার্ক নির্দেশিকা ও উদ্দেশ্য</h2>
+        <p><b>উদ্দেশ্য:</b> এটি একটি বিকেন্দ্রীভূত (Decentralized) নেটওয়ার্ক। এখানে কোনো কেন্দ্রীয় সার্ভার নেই, তাই আপনার তথ্য নিরাপদ এবং সেন্সরশিপ মুক্ত।</p>
+        <ul style="font-size: 14px; line-height: 1.8;">
+            <li><b>আইডেন্টিটি:</b> আপনার 'প্রাইভেট কি'-ই একমাত্র পরিচয়। এটি হারাবেন না।</li>
+            <li><b>নিরাপত্তা:</b> একাউন্টটি ৩০ দিনের জন্য এই ডিভাইসে সংরক্ষিত থাকবে।</li>
+            <li><b>অটো ডিলিট:</b> প্রতিটি মেসেজ ৭২ ঘণ্টা পর স্বয়ংক্রিয়ভাবে মুছে যাবে।</li>
+            <li><b>ট্রাস্ট:</b> ভালো তথ্যে 'Trust' দিন। এতে তথ্যের নির্ভরযোগ্যতা বাড়ে।</li>
         </ul>
-        <div style="text-align: right; font-weight: bold; margin-top: 15px; border-top: 1px dashed #b2dfdb; padding-top: 10px; color: var(--primary);">
-            — মেসেজটি করেছেন: Ana Abdulloh57
-        </div>
-        <button class="btn-main" style="max-width:450px; margin-top:20px;" onclick="acceptConsent()">I Accept</button>
+        <div style="text-align: right; font-size: 12px; color: var(--primary); margin-bottom: 10px;">— Admin: Ana Abdulloh57</div>
+        <button class="btn-main" onclick="acceptConsent()">I Accept & Continue</button>
     </div>
 </div>
 
 <div id="auth-screen">
     <div class="auth-card">
-        <h1>Identity Access</h1>
-        <input type="text" id="keyInput" placeholder="Enter Private Key...">
+        <h1 style="text-align: center; color: var(--primary);">Identity Access</h1>
+        <p style="text-align: center; font-size: 14px; color: #666;">Enter your Private Key to join the network.</p>
+        <input type="text" id="keyInput" placeholder="Paste your Private Key here...">
         <button class="btn-main" id="loginBtn" onclick="login()">Access Identity</button>
-        <button style="background: #e0e0e0;" id="genBtn" onclick="generateIdentity()">Create New ID (10s)</button>
-        <div id="progress-container">
-            <div class="progress-bar"><div class="progress-fill" id="fill"></div></div>
-            <div id="copy-section">
-                <div style="font-size: 12px; font-weight: bold; color: #d32f2f;">Copy this! This is your unique ID.</div>
-                <button style="background:#fbc02d; width:auto; padding:8px 20px;" id="copyBtn" onclick="copyToClipboard()">Copy Key</button>
-            </div>
-        </div>
+        <button style="background: #eee; color: #333;" id="genBtn" onclick="generateIdentity()">Create New Identity</button>
     </div>
 </div>
 
 <div id="app">
     <div class="fixed-header">
         <div class="container">
-            <div style="display:flex; justify-content:space-between; font-size:11px; margin-bottom:8px;">
-                <span id="userDisplay">Identity: Loading...</span>
-                <span style="color: #ffeb3b;">System: Decentralized Sync Active</span>
+            <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:10px;">
+                <span id="userDisplay">Identity: Connecting...</span>
+                <span style="color: #80cbc4;">Network: Relay + WebRTC Active</span>
             </div>
-            <div style="background:white; padding:12px; border-radius:15px;">
-                <textarea id="postBox" rows="2" placeholder="Share information..."></textarea>
-                <button id="postBtn" onclick="sendPost()" style="background:var(--primary); color:white; margin-top:10px;">Broadcast Post</button>
+            <div style="background:white; padding:15px; border-radius:15px;">
+                <textarea id="postBox" rows="2" placeholder="Share urgent information with the network..."></textarea>
+                <button onclick="sendPost()" style="background:var(--primary); color:white; margin:0;">Broadcast Information</button>
             </div>
         </div>
     </div>
-    <div class="container" id="feed" style="margin-top: 20px;"></div>
+    <div class="container" id="feed">
+        </div>
 </div>
 
 <script>
-    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
-
-<script>
-    // Using a more robust set of public relays
-    const gun = Gun([
-        'https://gun-manhattan.herokuapp.com/gun',
-        'https://peer.wall.org/gun',
-        'https://relay.cactus.chat:443/gun',
-        'https://gun-us.herokuapp.com/gun'
-    ]);
+    // Initialize Gun with Multiple Relays and WebRTC ICE Servers
+    const gun = Gun({
+        peers: [
+            'https://gun-manhattan.herokuapp.com/gun',
+            'https://relay.cactus.chat:443/gun',
+            'https://peer.wall.org/gun'
+        ],
+        rtc: {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun.services.mozilla.com' }
+            ]
+        }
+    });
 
     const sea = Gun.SEA;
+    let myKeys = null;
 
-    // Fixed StartNetwork Function for better sync
+    // Check for saved session
+    const savedSession = localStorage.getItem('guardian_session_v3');
+    if(savedSession) {
+        try { myKeys = JSON.parse(savedSession); } catch(e) { console.error("Session Error"); }
+    }
+
+    function acceptConsent() {
+        document.getElementById('manual-overlay').style.display = 'none';
+        if(myKeys) showApp();
+        else document.getElementById('auth-screen').style.display = 'flex';
+    }
+
+    async function generateIdentity() {
+        const btn = document.getElementById('genBtn');
+        btn.innerText = "Generating..."; btn.disabled = true;
+        const pair = await sea.pair();
+        document.getElementById('keyInput').value = JSON.stringify(pair);
+        btn.innerText = "Identity Created!"; btn.disabled = false;
+        alert("CRITICAL: Copy this key and save it. You cannot recover your account without it.");
+    }
+
+    function login() {
+        const raw = document.getElementById('keyInput').value;
+        if(!raw) return alert("Please enter a valid key.");
+        try {
+            myKeys = JSON.parse(raw);
+            localStorage.setItem('guardian_session_v3', raw);
+            showApp();
+        } catch(e) { alert("Invalid Private Key format."); }
+    }
+
+    function showApp() {
+        document.getElementById('auth-screen').style.display = 'none';
+        document.getElementById('app').style.display = 'block';
+        document.getElementById('userDisplay').innerText = "Identity: Citizen_" + myKeys.pub.slice(0,8);
+        startNetwork();
+    }
+
+    function sendPost() {
+        const body = document.getElementById('postBox').value.trim();
+        if(!body) return;
+
+        const time = Date.now();
+        const postData = {
+            body: body,
+            author: myKeys.pub,
+            time: time,
+            expires: time + (72 * 60 * 60 * 1000) // 72 Hours
+        };
+
+        // Saving to a robust network path
+        gun.get('guardian_v7_main').set(postData);
+        document.getElementById('postBox').value = "";
+    }
+
+    function giveTrust(postId) {
+        // Direct trust signaling via WebRTC/Relay
+        gun.get('guardian_v7_main').get(postId).get('trust').get(myKeys.pub).put(true);
+    }
+
     function startNetwork() {
-        const feedContainer = document.getElementById('feed');
+        const feed = document.getElementById('feed');
         
-        // Use a specific node for messages to ensure direct mapping
-        gun.get('guardian_network_v5').map().on((data, id) => {
-            // Check if data exists and is not expired
+        // Listen for all incoming data
+        gun.get('guardian_v7_main').map().on((data, id) => {
             if(!data || !data.body) return;
-            if(data.expires && Date.now() > data.expires) return;
+            
+            // Auto-cleanup check
+            if(Date.now() > data.expires) {
+                const old = document.getElementById(id);
+                if(old) old.remove();
+                return;
+            }
 
+            // Create or Update Message Card
             let card = document.getElementById(id);
             if(!card) {
                 card = document.createElement('div');
                 card.id = id;
                 card.className = 'msg-card';
-                // Insert at the top for real-time feel
-                feedContainer.prepend(card);
+                feed.prepend(card); // Newest messages on top
             }
 
-            // Simplified trust listener to prevent UI flickering
-            gun.get('guardian_network_v5').get(id).get('trust').on((tData) => {
-                let trustCount = 0;
+            // Trust Counter (Real-time)
+            gun.get('guardian_v7_main').get(id).get('trust').on((tData) => {
+                let count = 0;
                 if(tData) {
-                    Object.keys(tData).forEach(k => { 
-                        if(tData[k] === true) trustCount++; 
-                    });
+                    Object.keys(tData).forEach(k => { if(tData[k] === true) count++; });
                 }
                 
-                // Content update without breaking the DOM node
                 card.innerHTML = `
-                    <div style="white-space:pre-wrap; font-size:15px; color:#1a1a1a;">${data.body}</div>
-                    <div style="font-size:10px; color:#888; margin-top:12px; border-top:1px solid #eee; padding-top:5px;">
-                        Source: ${data.author ? data.author.slice(0,10) : 'Unknown'}... | ${new Date(data.time).toLocaleTimeString()}
+                    <div style="font-size:16px; line-height:1.5;">${data.body}</div>
+                    <div style="font-size:11px; color:#777; margin-top:12px; border-top:1px solid #eee; padding-top:8px; display:flex; justify-content:space-between;">
+                        <span>Source: ${data.author.slice(0,12)}...</span>
+                        <span>${new Date(data.time).toLocaleTimeString()}</span>
                     </div>
-                    <button class="trust-btn" onclick="giveTrust('${id}')">Trust (${trustCount})</button>`;
+                    <button class="trust-btn" onclick="giveTrust('${id}')">Trust Count: ${count}</button>
+                `;
             });
         });
     }
 </script>
+
 </body>
 </html>

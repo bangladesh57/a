@@ -2,91 +2,84 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Private P2P Hub</title>
     <style>
         * { box-sizing: border-box; }
         body { 
             background: #0b0b0b; color: #00ff00; font-family: 'Courier New', monospace; 
-            margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden;
+            margin: 0; display: flex; flex-direction: column; height: 100vh; height: -webkit-fill-available; overflow: hidden;
         }
         
-        /* Fixed Header */
+        /* Fixed Top Search Bar */
         header { 
-            height: 60px; background: #1a1a1a; border-bottom: 2px solid #00ff00;
-            display: flex; align-items: center; padding: 0 15px; flex-shrink: 0;
-            z-index: 100; gap: 10px;
+            padding: 10px; background: #1a1a1a; border-bottom: 2px solid #00ff00;
+            display: flex; align-items: center; gap: 8px; flex-shrink: 0;
         }
         #search-input { 
             flex: 1; background: #000; border: 1px solid #00ff00; color: #00ff00; 
             padding: 10px; outline: none; font-size: 14px;
         }
 
-        /* Scrollable Middle Area */
+        /* Scrollable Message Area */
         main { 
             flex: 1; overflow-y: auto; padding: 15px; 
-            display: flex; flex-direction: column; gap: 15px;
-            scroll-behavior: smooth;
+            display: flex; flex-direction: column; gap: 12px;
+            background: #0b0b0b;
         }
-        .msg-container {
-            background: #161616; border: 1px solid #333; padding: 12px; border-radius: 5px;
+        .msg-card {
+            background: #161616; border: 1px solid #333; padding: 12px; border-radius: 8px;
         }
-        .msg-tags { font-size: 0.8em; margin-bottom: 5px; display: flex; flex-wrap: wrap; gap: 5px; }
-        .tag { color: #00ff00; text-decoration: underline; cursor: pointer; font-weight: bold; }
-        .tag:hover { color: #fff; }
-        .msg-text { word-wrap: break-word; line-height: 1.4; color: #ccc; }
+        .tag-row { font-size: 0.85em; margin-bottom: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
+        .tag-btn { color: #00ff00; text-decoration: underline; cursor: pointer; font-weight: bold; }
+        .content-text { word-wrap: break-word; line-height: 1.5; color: #e0e0e0; }
 
-        /* Filter Banner */
-        #filter-banner {
-            background: #003300; padding: 5px 15px; font-size: 12px;
-            display: none; justify-content: space-between; align-items: center;
-        }
-
-        /* Fixed Footer */
+        /* Fixed Bottom Input Area */
         footer { 
-            height: 80px; background: #111; border-top: 2px solid #00ff00;
-            display: flex; align-items: center; padding: 15px; flex-shrink: 0;
-            gap: 10px; z-index: 100;
+            background: #111; border-top: 2px solid #00ff00;
+            padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); 
+            display: flex; gap: 8px; flex-shrink: 0;
         }
         #msgInput { 
             flex: 1; background: #000; border: 1px solid #00ff00; color: #00ff00; 
-            padding: 12px; outline: none; font-size: 16px;
+            padding: 12px; outline: none; font-size: 16px; border-radius: 4px;
         }
         #sendBtn { 
-            background: #00ff00; color: #000; border: none; padding: 0 20px; 
-            cursor: pointer; font-weight: bold; height: 45px;
+            background: #00ff00; color: #000; border: none; padding: 0 18px; 
+            cursor: pointer; font-weight: bold; border-radius: 4px; font-size: 15px;
         }
 
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-thumb { background: #00ff00; border-radius: 10px; }
+        /* Filter Info */
+        #filter-info {
+            background: #003300; padding: 6px 15px; font-size: 13px;
+            display: none; justify-content: space-between; align-items: center;
+        }
     </style>
 </head>
 <body>
 
 <header>
     <input type="text" id="search-input" placeholder="Search #tags...">
-    <button onclick="clearFilter()" style="background:#333; color:#fff; border:none; padding:8px; cursor:pointer;">Reset</button>
+    <button onclick="resetAll()" style="background:#444; color:#fff; border:none; padding:8px 12px; cursor:pointer; border-radius:4px;">Reset</button>
 </header>
 
-<div id="filter-banner">
-    <span id="filter-label"></span>
-    <span onclick="clearFilter()" style="cursor:pointer; color:red; font-weight:bold;">[X]</span>
+<div id="filter-info">
+    <span id="active-tag"></span>
+    <span onclick="resetAll()" style="cursor:pointer; color:#ff4444;">[Close]</span>
 </div>
 
-<main id="chat-box"></main>
+<main id="display-area"></main>
 
 <footer>
-    <input type="text" id="msgInput" placeholder="Message + #tags..." autocomplete="off">
-    <button id="sendBtn" onclick="handleSend()">POST</button>
+    <input type="text" id="msgInput" placeholder="Write message with #tags..." autocomplete="off">
+    <button id="sendBtn" onclick="transmit()">POST</button>
 </footer>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
     import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
 
-    // Encrypted Config
-    const _0x = {
+    const config = {
         apiKey: atob("QUl6YVN5QXd1SzJPX3YxbG8wWFZvLTlPekpiU1dJRkY2MXFqWTJB"),
         authDomain: atob("YmFuZ2xhZGVzaC00MjI1MS5maXJlYmFzZWFwcC5jb20="),
         databaseURL: atob("aHR0cHM6Ly9iYW5nbGFkZXNoLTQyMjUxLWRlZmF1bHQtcnRkYi5maXJlYmFzZWlvLmNvbQ=="),
@@ -94,90 +87,81 @@
         appId: atob("MToxNzU1OTIwNjY0NDI6d2ViOjI2Yjg0NDM1YzZlZWNmMGI5NjhjNzM=")
     };
 
-    const app = initializeApp(_0x);
+    const app = initializeApp(config);
     const db = getDatabase(app);
-    let activeFilter = null;
+    let filterKey = null;
 
-    const chatBox = document.getElementById('chat-box');
-    const searchInput = document.getElementById('search-input');
+    const mainArea = document.getElementById('display-area');
+    const searchInp = document.getElementById('search-input');
 
-    // Filter Logic
-    window.applyFilter = (tag) => {
-        activeFilter = tag.toLowerCase();
-        document.getElementById('filter-banner').style.display = 'flex';
-        document.getElementById('filter-label').innerText = "Filtering: " + tag;
-        renderMessages();
+    window.setFilter = (t) => {
+        filterKey = t.toLowerCase();
+        document.getElementById('filter-info').style.display = 'flex';
+        document.getElementById('active-tag').innerText = "Filter: " + t;
+        refreshUI();
     };
 
-    window.clearFilter = () => {
-        activeFilter = null;
-        searchInput.value = '';
-        document.getElementById('filter-banner').style.display = 'none';
-        renderMessages();
+    window.resetAll = () => {
+        filterKey = null;
+        searchInp.value = '';
+        document.getElementById('filter-info').style.display = 'none';
+        refreshUI();
     };
 
-    // Search input event
-    searchInput.addEventListener('input', (e) => {
-        const val = e.target.value.trim();
-        if(val) applyFilter(val); else clearFilter();
+    searchInp.addEventListener('input', (e) => {
+        const v = e.target.value.trim();
+        if(v) setFilter(v); else resetAll();
     });
 
-    const renderMessages = () => {
+    const refreshUI = () => {
         const now = Date.now();
-        let logs = JSON.parse(localStorage.getItem('_p2p_msgs')) || [];
+        let data = JSON.parse(localStorage.getItem('_app_cache')) || [];
         
-        // Auto-delete 24h old messages
-        logs = logs.filter(m => m.exp > now);
-        localStorage.setItem('_p2p_msgs', JSON.stringify(logs));
+        data = data.filter(i => i.expiry > now);
+        localStorage.setItem('_app_cache', JSON.stringify(data));
 
-        let toShow = logs;
-        if (activeFilter) {
-            toShow = logs.filter(m => m.txt.toLowerCase().includes(activeFilter));
+        let viewData = data;
+        if (filterKey) {
+            viewData = data.filter(i => i.val.toLowerCase().includes(filterKey));
         }
 
-        chatBox.innerHTML = toShow.map(m => {
-            const tags = m.txt.match(/#\w+/g) || [];
-            const tagHtml = tags.map(t => `<span class="tag" onclick="applyFilter('${t}')">${t}</span>`).join(' ');
-            const cleanText = m.txt.replace(/#\w+/g, ''); // Hide tags from main text if preferred, or keep them.
-            
+        mainArea.innerHTML = viewData.map(i => {
+            const tags = i.val.match(/#\w+/g) || [];
+            const tagsHtml = tags.map(t => `<span class="tag-btn" onclick="setFilter('${t}')">${t}</span>`).join(' ');
             return `
-                <div class="msg-container">
-                    <div class="msg-tags">${tagHtml}</div>
-                    <div class="msg-text">${m.txt}</div>
+                <div class="msg-card">
+                    <div class="tag-row">${tagsHtml}</div>
+                    <div class="content-text">${i.val}</div>
                 </div>
             `;
         }).join('');
         
-        // Auto scroll to bottom
-        chatBox.scrollTop = chatBox.scrollHeight;
+        mainArea.scrollTop = mainArea.scrollHeight;
     };
 
-    const processIncoming = (text) => {
-        let logs = JSON.parse(localStorage.getItem('_p2p_msgs')) || [];
-        if (!logs.some(l => l.txt === text)) {
-            logs.push({ txt: text, exp: Date.now() + 86400000 });
-            localStorage.setItem('_p2p_msgs', JSON.stringify(logs));
+    const handleSync = (msg) => {
+        let cache = JSON.parse(localStorage.getItem('_app_cache')) || [];
+        if (!cache.some(c => c.val === msg)) {
+            cache.push({ val: msg, expiry: Date.now() + 86400000 });
+            localStorage.setItem('_app_cache', JSON.stringify(cache));
         }
-        renderMessages();
+        refreshUI();
     };
 
-    window.handleSend = () => {
-        const input = document.getElementById('msgInput');
-        if (input.value.trim()) {
-            push(ref(db, 'p2p_v3'), { m: input.value, ts: Date.now() });
-            input.value = '';
+    window.transmit = () => {
+        const inp = document.getElementById('msgInput');
+        if (inp.value.trim()) {
+            push(ref(db, 'p2p_v4'), { m: inp.value, ts: Date.now() });
+            inp.value = '';
         }
     };
 
-    // Firebase listener
-    onValue(ref(db, 'p2p_v3'), (snap) => {
-        const data = snap.val();
-        if (data) {
-            Object.values(data).forEach(o => processIncoming(o.m));
-        }
+    onValue(ref(db, 'p2p_v4'), (s) => {
+        const d = s.val();
+        if (d) Object.values(d).forEach(o => handleSync(o.m));
     });
 
-    renderMessages();
+    refreshUI();
 </script>
 </body>
 </html>

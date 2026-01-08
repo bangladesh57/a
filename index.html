@@ -8,50 +8,56 @@
         * { box-sizing: border-box; }
         body { 
             background: #0b0b0b; color: #00ff00; font-family: 'Courier New', monospace; 
-            margin: 0; display: flex; flex-direction: column; height: 100vh; height: -webkit-fill-available; overflow: hidden;
+            margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden;
         }
         
-        /* Fixed Top Search Bar */
+        /* Fixed Header */
         header { 
-            padding: 10px; background: #1a1a1a; border-bottom: 2px solid #00ff00;
-            display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+            height: 60px; background: #1a1a1a; border-bottom: 2px solid #00ff00;
+            display: flex; align-items: center; padding: 0 15px; flex-shrink: 0;
+            z-index: 1000; gap: 10px;
         }
         #search-input { 
             flex: 1; background: #000; border: 1px solid #00ff00; color: #00ff00; 
             padding: 10px; outline: none; font-size: 14px;
         }
 
-        /* Scrollable Message Area */
+        /* Scrollable Area (Middle) */
         main { 
             flex: 1; overflow-y: auto; padding: 15px; 
-            display: flex; flex-direction: column; gap: 12px;
+            display: flex; flex-direction: column; gap: 15px;
             background: #0b0b0b;
         }
-        .msg-card {
-            background: #161616; border: 1px solid #333; padding: 12px; border-radius: 8px;
+        
+        /* Message Card */
+        .msg-container {
+            background: #161616; border: 1px solid #333; padding: 12px; border-radius: 5px;
+            animation: slideIn 0.3s ease-out;
         }
-        .tag-row { font-size: 0.85em; margin-bottom: 6px; display: flex; flex-wrap: wrap; gap: 6px; }
-        .tag-btn { color: #00ff00; text-decoration: underline; cursor: pointer; font-weight: bold; }
-        .content-text { word-wrap: break-word; line-height: 1.5; color: #e0e0e0; }
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .tag-row { font-size: 0.8em; margin-bottom: 5px; display: flex; flex-wrap: wrap; gap: 6px; }
+        .tag { color: #00ff00; text-decoration: underline; cursor: pointer; font-weight: bold; }
+        .msg-text { word-wrap: break-word; line-height: 1.4; color: #ccc; }
 
-        /* Fixed Bottom Input Area */
+        /* Fixed Footer */
         footer { 
-            background: #111; border-top: 2px solid #00ff00;
-            padding: 12px 12px calc(12px + env(safe-area-inset-bottom)); 
-            display: flex; gap: 8px; flex-shrink: 0;
+            height: 80px; background: #111; border-top: 2px solid #00ff00;
+            display: flex; align-items: center; padding: 15px; flex-shrink: 0;
+            gap: 10px; z-index: 1000; padding-bottom: calc(15px + env(safe-area-inset-bottom));
         }
         #msgInput { 
             flex: 1; background: #000; border: 1px solid #00ff00; color: #00ff00; 
-            padding: 12px; outline: none; font-size: 16px; border-radius: 4px;
+            padding: 12px; outline: none; font-size: 16px;
         }
         #sendBtn { 
-            background: #00ff00; color: #000; border: none; padding: 0 18px; 
-            cursor: pointer; font-weight: bold; border-radius: 4px; font-size: 15px;
+            background: #00ff00; color: #000; border: none; padding: 0 20px; 
+            cursor: pointer; font-weight: bold; height: 45px; border-radius: 4px;
         }
 
-        /* Filter Info */
-        #filter-info {
-            background: #003300; padding: 6px 15px; font-size: 13px;
+        /* Filter Label */
+        #filter-banner {
+            background: #003300; padding: 5px 15px; font-size: 12px;
             display: none; justify-content: space-between; align-items: center;
         }
     </style>
@@ -60,26 +66,26 @@
 
 <header>
     <input type="text" id="search-input" placeholder="Search #tags...">
-    <button onclick="resetAll()" style="background:#444; color:#fff; border:none; padding:8px 12px; cursor:pointer; border-radius:4px;">Reset</button>
+    <button onclick="clearFilter()" style="background:#333; color:#fff; border:none; padding:8px 12px; cursor:pointer;">Reset</button>
 </header>
 
-<div id="filter-info">
-    <span id="active-tag"></span>
-    <span onclick="resetAll()" style="cursor:pointer; color:#ff4444;">[Close]</span>
+<div id="filter-banner">
+    <span id="filter-label"></span>
+    <span onclick="clearFilter()" style="cursor:pointer; color:red; font-weight:bold;">[X]</span>
 </div>
 
-<main id="display-area"></main>
+<main id="chat-box"></main>
 
 <footer>
-    <input type="text" id="msgInput" placeholder="Write message with #tags..." autocomplete="off">
-    <button id="sendBtn" onclick="transmit()">POST</button>
+    <input type="text" id="msgInput" placeholder="Message + #tags..." autocomplete="off">
+    <button id="sendBtn" onclick="handleSend()">POST</button>
 </footer>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
     import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
 
-    const config = {
+    const _c = {
         apiKey: atob("QUl6YVN5QXd1SzJPX3YxbG8wWFZvLTlPekpiU1dJRkY2MXFqWTJB"),
         authDomain: atob("YmFuZ2xhZGVzaC00MjI1MS5maXJlYmFzZWFwcC5jb20="),
         databaseURL: atob("aHR0cHM6Ly9iYW5nbGFkZXNoLTQyMjUxLWRlZmF1bHQtcnRkYi5maXJlYmFzZWlvLmNvbQ=="),
@@ -87,81 +93,84 @@
         appId: atob("MToxNzU1OTIwNjY0NDI6d2ViOjI2Yjg0NDM1YzZlZWNmMGI5NjhjNzM=")
     };
 
-    const app = initializeApp(config);
+    const app = initializeApp(_c);
     const db = getDatabase(app);
-    let filterKey = null;
+    let activeFilter = null;
 
-    const mainArea = document.getElementById('display-area');
-    const searchInp = document.getElementById('search-input');
+    const chatBox = document.getElementById('chat-box');
+    const searchInput = document.getElementById('search-input');
 
-    window.setFilter = (t) => {
-        filterKey = t.toLowerCase();
-        document.getElementById('filter-info').style.display = 'flex';
-        document.getElementById('active-tag').innerText = "Filter: " + t;
-        refreshUI();
+    window.applyFilter = (tag) => {
+        activeFilter = tag.toLowerCase();
+        document.getElementById('filter-banner').style.display = 'flex';
+        document.getElementById('filter-label').innerText = "Filter: " + tag;
+        renderMessages();
     };
 
-    window.resetAll = () => {
-        filterKey = null;
-        searchInp.value = '';
-        document.getElementById('filter-info').style.display = 'none';
-        refreshUI();
+    window.clearFilter = () => {
+        activeFilter = null;
+        searchInput.value = '';
+        document.getElementById('filter-banner').style.display = 'none';
+        renderMessages();
     };
 
-    searchInp.addEventListener('input', (e) => {
-        const v = e.target.value.trim();
-        if(v) setFilter(v); else resetAll();
+    searchInput.addEventListener('input', (e) => {
+        const val = e.target.value.trim();
+        if(val) applyFilter(val); else clearFilter();
     });
 
-    const refreshUI = () => {
+    const renderMessages = () => {
         const now = Date.now();
-        let data = JSON.parse(localStorage.getItem('_app_cache')) || [];
+        let logs = JSON.parse(localStorage.getItem('_v5_cache')) || [];
         
-        data = data.filter(i => i.expiry > now);
-        localStorage.setItem('_app_cache', JSON.stringify(data));
+        logs = logs.filter(m => m.exp > now);
+        localStorage.setItem('_v5_cache', JSON.stringify(logs));
 
-        let viewData = data;
-        if (filterKey) {
-            viewData = data.filter(i => i.val.toLowerCase().includes(filterKey));
+        let toShow = logs;
+        if (activeFilter) {
+            toShow = logs.filter(m => m.txt.toLowerCase().includes(activeFilter));
         }
 
-        mainArea.innerHTML = viewData.map(i => {
-            const tags = i.val.match(/#\w+/g) || [];
-            const tagsHtml = tags.map(t => `<span class="tag-btn" onclick="setFilter('${t}')">${t}</span>`).join(' ');
+        // Sort: Newest First (Descending by timestamp)
+        const sortedData = toShow.sort((a, b) => b.ts - a.ts);
+
+        chatBox.innerHTML = sortedData.map(m => {
+            const tags = m.txt.match(/#\w+/g) || [];
+            const tagHtml = tags.map(t => `<span class="tag" onclick="applyFilter('${t}')">${t}</span>`).join(' ');
             return `
-                <div class="msg-card">
-                    <div class="tag-row">${tagsHtml}</div>
-                    <div class="content-text">${i.val}</div>
+                <div class="msg-container">
+                    <div class="tag-row">${tagHtml}</div>
+                    <div class="msg-text">${m.txt}</div>
                 </div>
             `;
         }).join('');
-        
-        mainArea.scrollTop = mainArea.scrollHeight;
     };
 
-    const handleSync = (msg) => {
-        let cache = JSON.parse(localStorage.getItem('_app_cache')) || [];
-        if (!cache.some(c => c.val === msg)) {
-            cache.push({ val: msg, expiry: Date.now() + 86400000 });
-            localStorage.setItem('_app_cache', JSON.stringify(cache));
+    const processData = (text, timestamp) => {
+        let logs = JSON.parse(localStorage.getItem('_v5_cache')) || [];
+        if (!logs.some(l => l.txt === text && Math.abs(l.ts - timestamp) < 1000)) {
+            logs.push({ txt: text, ts: timestamp, exp: Date.now() + 86400000 });
+            localStorage.setItem('_v5_cache', JSON.stringify(logs));
         }
-        refreshUI();
+        renderMessages();
     };
 
-    window.transmit = () => {
-        const inp = document.getElementById('msgInput');
-        if (inp.value.trim()) {
-            push(ref(db, 'p2p_v4'), { m: inp.value, ts: Date.now() });
-            inp.value = '';
+    window.handleSend = () => {
+        const input = document.getElementById('msgInput');
+        if (input.value.trim()) {
+            push(ref(db, 'p2p_v5'), { m: input.value, ts: Date.now() });
+            input.value = '';
         }
     };
 
-    onValue(ref(db, 'p2p_v4'), (s) => {
-        const d = s.val();
-        if (d) Object.values(d).forEach(o => handleSync(o.m));
+    onValue(ref(db, 'p2p_v5'), (snap) => {
+        const data = snap.val();
+        if (data) {
+            Object.values(data).forEach(o => processData(o.m, o.ts));
+        }
     });
 
-    refreshUI();
+    renderMessages();
 </script>
 </body>
 </html>

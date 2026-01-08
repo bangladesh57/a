@@ -3,32 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Private P2P Hub</title>
+    <title>Private Tag Hub</title>
     <style>
-        body { background: #0f0f0f; color: #00ff00; font-family: monospace; display: flex; flex-direction: column; height: 100vh; margin: 0; }
-        #chat-box { flex: 1; overflow-y: auto; padding: 20px; border-bottom: 1px solid #333; }
-        #input-area { padding: 10px; display: flex; gap: 10px; background: #1a1a1a; }
-        input { flex: 1; background: #000; border: 1px solid #00ff00; color: #00ff00; padding: 10px; outline: none; }
-        button { background: #00ff00; color: #000; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; }
-        .tag-folder { font-size: 0.8em; color: #888; padding: 5px; background: #222; margin-top: 5px; }
-        .msg { margin-bottom: 10px; padding: 5px; border-left: 2px solid #00ff00; }
+        body { background: #0b0b0b; color: #00ff00; font-family: 'Courier New', monospace; display: flex; flex-direction: column; height: 100vh; margin: 0; overflow: hidden; }
+        #header { padding: 10px; background: #1a1a1a; display: flex; gap: 10px; border-bottom: 1px solid #00ff00; }
+        #search-input { flex: 1; background: #000; border: 1px solid #00ff00; color: #00ff00; padding: 8px; outline: none; }
+        #chat-box { flex: 1; overflow-y: auto; padding: 20px; }
+        #input-area { padding: 15px; background: #111; display: flex; gap: 10px; border-top: 1px solid #333; }
+        input[type="text"] { flex: 1; background: #000; border: 1px solid #00ff00; color: #00ff00; padding: 12px; outline: none; }
+        button { background: #00ff00; color: #000; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #00cc00; }
+        .msg { margin-bottom: 15px; padding: 10px; border: 1px solid #222; border-radius: 5px; background: #161616; position: relative; }
+        .tag { color: #00ff00; text-decoration: underline; cursor: pointer; margin-right: 5px; font-weight: bold; }
+        .tag:hover { color: #fff; }
+        .filter-info { padding: 5px 20px; background: #333; font-size: 0.8em; display: none; justify-content: space-between; }
+        #tag-cloud { padding: 5px 20px; font-size: 0.7em; color: #888; border-bottom: 1px solid #222; max-height: 40px; overflow-x: auto; white-space: nowrap; }
     </style>
 </head>
 <body>
 
+<div id="header">
+    <input type="text" id="search-input" placeholder="Search #hashtags...">
+    <button onclick="clearFilter()">Show All</button>
+</div>
+
+<div id="tag-cloud">Saved Tags: </div>
+<div id="filter-banner" class="filter-info">
+    <span id="filter-text">Filtering by: </span>
+    <span style="cursor:pointer" onclick="clearFilter()">[X] Close</span>
+</div>
+
 <div id="chat-box"></div>
-<div id="hashtag-display" class="tag-folder">Hashtags Saved: </div>
+
 <div id="input-area">
-    <input type="text" id="msgInput" placeholder="Type message (max 10 #tags)..." maxlength="500">
-    <button onclick="handleSend()">Send</button>
+    <input type="text" id="msgInput" placeholder="Message + #tags (max 10)..." maxlength="500">
+    <button onclick="handleSend()">Post</button>
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
     import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
 
-    // Obfuscated Configuration
-    const _0x4f2 = {
+    // Encrypted Config
+    const _c = {
         apiKey: atob("QUl6YVN5QXd1SzJPX3YxbG8wWFZvLTlPekpiU1dJRkY2MXFqWTJB"),
         authDomain: atob("YmFuZ2xhZGVzaC00MjI1MS5maXJlYmFzZWFwcC5jb20="),
         databaseURL: atob("aHR0cHM6Ly9iYW5nbGFkZXNoLTQyMjUxLWRlZmF1bHQtcnRkYi5maXJlYmFzZWlvLmNvbQ=="),
@@ -36,68 +53,102 @@
         appId: atob("MToxNzU1OTIwNjY0NDI6d2ViOjI2Yjg0NDM1YzZlZWNmMGI5NjhjNzM=")
     };
 
-    const app = initializeApp(_0x4f2);
+    const app = initializeApp(_c);
     const db = getDatabase(app);
+    let currentFilter = null;
 
-    const chatBox = document.getElementById('chat-box');
-    const msgInput = document.getElementById('msgInput');
-    const tagDisplay = document.getElementById('hashtag-display');
-
-    // Permanent Hashtag Storage Logic
-    const saveTags = (text) => {
+    // Permanent Hashtag Folder Logic
+    const processTags = (text) => {
         const tags = text.match(/#\w+/g) || [];
-        let stored = JSON.parse(localStorage.getItem('_t_folder')) || [];
-        let updated = [...new Set([...stored, ...tags.slice(0, 10)])];
-        localStorage.setItem('_t_folder', JSON.stringify(updated));
-        renderTags();
+        let folder = JSON.parse(localStorage.getItem('_idx_tags')) || {};
+        tags.slice(0, 10).forEach(t => {
+            if(!folder[t]) folder[t] = true; 
+        });
+        localStorage.setItem('_idx_tags', JSON.stringify(folder));
+        updateTagCloud();
     };
 
-    const renderTags = () => {
-        const tags = JSON.parse(localStorage.getItem('_t_folder')) || [];
-        tagDisplay.innerText = "Hashtags Folder: " + tags.join(' ');
+    const updateTagCloud = () => {
+        const folder = JSON.parse(localStorage.getItem('_idx_tags')) || {};
+        const html = Object.keys(folder).map(t => `<span class="tag" onclick="filterByTag('${t}')">${t}</span>`).join(' ');
+        document.getElementById('tag-cloud').innerHTML = "All Tags: " + html;
     };
 
-    // Ephemeral Message Storage (24h)
-    const storeMsg = (text) => {
-        const expiry = Date.now() + 86400000;
-        let logs = JSON.parse(localStorage.getItem('_m_logs')) || [];
-        logs.push({ t: text, e: expiry });
-        localStorage.setItem('_m_logs', JSON.stringify(logs));
-        saveTags(text);
-        renderMsgs();
-    };
-
-    const renderMsgs = () => {
+    // UI Rendering with Tag Links
+    const renderContent = () => {
         const now = Date.now();
-        let logs = JSON.parse(localStorage.getItem('_m_logs')) || [];
-        const filtered = logs.filter(m => m.e > now);
-        localStorage.setItem('_m_logs', JSON.stringify(filtered));
-        
-        chatBox.innerHTML = filtered.map(m => `<div class="msg">${m.t}</div>`).join('');
-        chatBox.scrollTop = chatBox.scrollHeight;
+        let logs = JSON.parse(localStorage.getItem('_m_db')) || [];
+        const filteredLogs = logs.filter(m => m.e > now);
+        localStorage.setItem('_m_db', JSON.stringify(filteredLogs));
+
+        let displayList = filteredLogs;
+        if(currentFilter) {
+            displayList = filteredLogs.filter(m => m.t.includes(currentFilter));
+            document.getElementById('filter-banner').style.display = 'flex';
+            document.getElementById('filter-text').innerText = "Showing: " + currentFilter;
+        } else {
+            document.getElementById('filter-banner').style.display = 'none';
+        }
+
+        const chatBox = document.getElementById('chat-box');
+        chatBox.innerHTML = displayList.map(m => {
+            // Convert tags to clickable links
+            const linkedText = m.t.replace(/#\w+/g, (match) => `<span class="tag" onclick="filterByTag('${match}')">${match}</span>`);
+            return `<div class="msg">${linkedText}</div>`;
+        }).reverse().join('');
     };
 
-    // Global send function
+    // Save logic (24h expiry)
+    const saveIncoming = (text) => {
+        let logs = JSON.parse(localStorage.getItem('_m_db')) || [];
+        // Prevent duplicate local saves
+        if (logs.some(l => l.t === text)) return;
+        
+        logs.push({ t: text, e: Date.now() + 86400000 });
+        localStorage.setItem('_m_db', JSON.stringify(logs));
+        processTags(text);
+        renderContent();
+    };
+
+    window.filterByTag = (tag) => {
+        currentFilter = tag;
+        renderContent();
+    };
+
+    window.clearFilter = () => {
+        currentFilter = null;
+        renderContent();
+    };
+
     window.handleSend = () => {
-        const val = msgInput.value.trim();
-        if(val) {
-            push(ref(db, 'global_stream'), { m: val, ts: Date.now() });
-            msgInput.value = '';
+        const inp = document.getElementById('msgInput');
+        if(inp.value.trim()) {
+            push(ref(db, 'p2p_stream'), { m: inp.value, ts: Date.now() });
+            inp.value = '';
         }
     };
 
-    // Listen for messages (Simulating P2P via RTDB for simple sync)
-    onValue(ref(db, 'global_stream'), (snapshot) => {
-        const data = snapshot.val();
-        if(data) {
-            const lastMsg = Object.values(data).pop();
-            storeMsg(lastMsg.m);
+    // Search Box Listener
+    document.getElementById('search-input').addEventListener('input', (e) => {
+        const val = e.target.value.trim();
+        if(val.startsWith('#')) {
+            currentFilter = val;
+            renderContent();
         }
     });
 
-    renderTags();
-    renderMsgs();
-    setInterval(renderMsgs, 60000); // Cleanup check every minute
+    // Firebase Sync
+    onValue(ref(db, 'p2p_stream'), (snap) => {
+        const data = snap.val();
+        if(data) {
+            Object.values(data).forEach(obj => saveIncoming(obj.m));
+        }
+    });
+
+    // Initial run
+    updateTagCloud();
+    renderContent();
+    setInterval(renderContent, 60000); 
 </script>
 
 </body>

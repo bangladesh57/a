@@ -11,51 +11,49 @@
             margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden;
         }
         
-        /* Fixed Header */
-        header { 
-            height: 60px; background: #1a1a1a; border-bottom: 2px solid #00ff00;
-            display: flex; align-items: center; padding: 0 15px; flex-shrink: 0;
-            z-index: 1000; gap: 10px;
+        /* Combined Top Fixed Area */
+        #top-fixed-section {
+            display: flex; flex-direction: column; background: #1a1a1a;
+            border-bottom: 2px solid #00ff00; z-index: 1000; flex-shrink: 0;
+        }
+
+        /* Search Bar */
+        .search-row { 
+            display: flex; padding: 10px; gap: 10px; border-bottom: 1px solid #333; 
         }
         #search-input { 
             flex: 1; background: #000; border: 1px solid #00ff00; color: #00ff00; 
-            padding: 10px; outline: none; font-size: 14px;
+            padding: 8px; outline: none; font-size: 14px;
         }
 
-        /* Scrollable Area (Middle) */
+        /* Post Box (Now at Top) */
+        .post-row { 
+            display: flex; padding: 10px; gap: 10px; background: #111;
+        }
+        #msgInput { 
+            flex: 1; background: #000; border: 1px solid #00ff00; color: #00ff00; 
+            padding: 10px; outline: none; font-size: 16px;
+        }
+        #sendBtn { 
+            background: #00ff00; color: #000; border: none; padding: 0 20px; 
+            cursor: pointer; font-weight: bold; border-radius: 4px;
+        }
+
+        /* Scrollable Message Area (Below the fixed top) */
         main { 
             flex: 1; overflow-y: auto; padding: 15px; 
             display: flex; flex-direction: column; gap: 15px;
             background: #0b0b0b;
         }
         
-        /* Message Card */
         .msg-container {
             background: #161616; border: 1px solid #333; padding: 12px; border-radius: 5px;
-            animation: slideIn 0.3s ease-out;
         }
-        @keyframes slideIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-        
         .tag-row { font-size: 0.8em; margin-bottom: 5px; display: flex; flex-wrap: wrap; gap: 6px; }
         .tag { color: #00ff00; text-decoration: underline; cursor: pointer; font-weight: bold; }
         .msg-text { word-wrap: break-word; line-height: 1.4; color: #ccc; }
 
-        /* Fixed Footer */
-        footer { 
-            height: 80px; background: #111; border-top: 2px solid #00ff00;
-            display: flex; align-items: center; padding: 15px; flex-shrink: 0;
-            gap: 10px; z-index: 1000; padding-bottom: calc(15px + env(safe-area-inset-bottom));
-        }
-        #msgInput { 
-            flex: 1; background: #000; border: 1px solid #00ff00; color: #00ff00; 
-            padding: 12px; outline: none; font-size: 16px;
-        }
-        #sendBtn { 
-            background: #00ff00; color: #000; border: none; padding: 0 20px; 
-            cursor: pointer; font-weight: bold; height: 45px; border-radius: 4px;
-        }
-
-        /* Filter Label */
+        /* Filter Banner */
         #filter-banner {
             background: #003300; padding: 5px 15px; font-size: 12px;
             display: none; justify-content: space-between; align-items: center;
@@ -64,28 +62,30 @@
 </head>
 <body>
 
-<header>
-    <input type="text" id="search-input" placeholder="Search #tags...">
-    <button onclick="clearFilter()" style="background:#333; color:#fff; border:none; padding:8px 12px; cursor:pointer;">Reset</button>
-</header>
+<div id="top-fixed-section">
+    <div class="search-row">
+        <input type="text" id="search-input" placeholder="Search #tags...">
+        <button onclick="clearFilter()" style="background:#444; color:#fff; border:none; padding:5px 10px; cursor:pointer; font-size:12px;">Reset</button>
+    </div>
+    
+    <div class="post-row">
+        <input type="text" id="msgInput" placeholder="Write message + #tags..." autocomplete="off">
+        <button id="sendBtn" onclick="handleSend()">POST</button>
+    </div>
 
-<div id="filter-banner">
-    <span id="filter-label"></span>
-    <span onclick="clearFilter()" style="cursor:pointer; color:red; font-weight:bold;">[X]</span>
+    <div id="filter-banner">
+        <span id="filter-label"></span>
+        <span onclick="clearFilter()" style="cursor:pointer; color:red; font-weight:bold; padding:5px;">[X]</span>
+    </div>
 </div>
 
 <main id="chat-box"></main>
-
-<footer>
-    <input type="text" id="msgInput" placeholder="Message + #tags..." autocomplete="off">
-    <button id="sendBtn" onclick="handleSend()">POST</button>
-</footer>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
     import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
 
-    const _c = {
+    const _fb = {
         apiKey: atob("QUl6YVN5QXd1SzJPX3YxbG8wWFZvLTlPekpiU1dJRkY2MXFqWTJB"),
         authDomain: atob("YmFuZ2xhZGVzaC00MjI1MS5maXJlYmFzZWFwcC5jb20="),
         databaseURL: atob("aHR0cHM6Ly9iYW5nbGFkZXNoLTQyMjUxLWRlZmF1bHQtcnRkYi5maXJlYmFzZWlvLmNvbQ=="),
@@ -93,25 +93,25 @@
         appId: atob("MToxNzU1OTIwNjY0NDI6d2ViOjI2Yjg0NDM1YzZlZWNmMGI5NjhjNzM=")
     };
 
-    const app = initializeApp(_c);
+    const app = initializeApp(_fb);
     const db = getDatabase(app);
-    let activeFilter = null;
+    let activeTag = null;
 
     const chatBox = document.getElementById('chat-box');
     const searchInput = document.getElementById('search-input');
 
     window.applyFilter = (tag) => {
-        activeFilter = tag.toLowerCase();
+        activeTag = tag.toLowerCase();
         document.getElementById('filter-banner').style.display = 'flex';
         document.getElementById('filter-label').innerText = "Filter: " + tag;
-        renderMessages();
+        renderUI();
     };
 
     window.clearFilter = () => {
-        activeFilter = null;
+        activeTag = null;
         searchInput.value = '';
         document.getElementById('filter-banner').style.display = 'none';
-        renderMessages();
+        renderUI();
     };
 
     searchInput.addEventListener('input', (e) => {
@@ -119,22 +119,23 @@
         if(val) applyFilter(val); else clearFilter();
     });
 
-    const renderMessages = () => {
+    const renderUI = () => {
         const now = Date.now();
-        let logs = JSON.parse(localStorage.getItem('_v5_cache')) || [];
+        let logs = JSON.parse(localStorage.getItem('_v6_db')) || [];
         
+        // Cleanup 24h old
         logs = logs.filter(m => m.exp > now);
-        localStorage.setItem('_v5_cache', JSON.stringify(logs));
+        localStorage.setItem('_v6_db', JSON.stringify(logs));
 
-        let toShow = logs;
-        if (activeFilter) {
-            toShow = logs.filter(m => m.txt.toLowerCase().includes(activeFilter));
+        let toDisplay = logs;
+        if (activeTag) {
+            toDisplay = logs.filter(m => m.txt.toLowerCase().includes(activeTag));
         }
 
-        // Sort: Newest First (Descending by timestamp)
-        const sortedData = toShow.sort((a, b) => b.ts - a.ts);
+        // Sort: Newest First
+        const sorted = toDisplay.sort((a, b) => b.ts - a.ts);
 
-        chatBox.innerHTML = sortedData.map(m => {
+        chatBox.innerHTML = sorted.map(m => {
             const tags = m.txt.match(/#\w+/g) || [];
             const tagHtml = tags.map(t => `<span class="tag" onclick="applyFilter('${t}')">${t}</span>`).join(' ');
             return `
@@ -146,31 +147,31 @@
         }).join('');
     };
 
-    const processData = (text, timestamp) => {
-        let logs = JSON.parse(localStorage.getItem('_v5_cache')) || [];
-        if (!logs.some(l => l.txt === text && Math.abs(l.ts - timestamp) < 1000)) {
-            logs.push({ txt: text, ts: timestamp, exp: Date.now() + 86400000 });
-            localStorage.setItem('_v5_cache', JSON.stringify(logs));
+    const processSync = (text, time) => {
+        let logs = JSON.parse(localStorage.getItem('_v6_db')) || [];
+        if (!logs.some(l => l.txt === text && Math.abs(l.ts - time) < 1000)) {
+            logs.push({ txt: text, ts: time, exp: Date.now() + 86400000 });
+            localStorage.setItem('_v6_db', JSON.stringify(logs));
         }
-        renderMessages();
+        renderUI();
     };
 
     window.handleSend = () => {
         const input = document.getElementById('msgInput');
         if (input.value.trim()) {
-            push(ref(db, 'p2p_v5'), { m: input.value, ts: Date.now() });
+            push(ref(db, 'p2p_v6'), { m: input.value, ts: Date.now() });
             input.value = '';
         }
     };
 
-    onValue(ref(db, 'p2p_v5'), (snap) => {
+    onValue(ref(db, 'p2p_v6'), (snap) => {
         const data = snap.val();
         if (data) {
-            Object.values(data).forEach(o => processData(o.m, o.ts));
+            Object.values(data).forEach(o => processSync(o.m, o.ts));
         }
     });
 
-    renderMessages();
+    renderUI();
 </script>
 </body>
 </html>

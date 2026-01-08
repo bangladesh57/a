@@ -3,175 +3,102 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Guardian Network | Ana Abdulloh57</title>
-    
-    <script src="https://cdn.jsdelivr.net/npm/gun/gun.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/gun/sea.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/gun/lib/webrtc.js"></script>
-
+    <title>Private P2P Hub</title>
     <style>
-        :root { --primary: #004d40; --secondary: #00695c; --bg: #f4f7f6; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: var(--bg); margin: 0; color: #333; }
-
-        /* Overlays */
-        #manual-overlay, #auth-screen {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: white; z-index: 3000; display: flex; flex-direction: column;
-            align-items: center; justify-content: center; padding: 20px; box-sizing: border-box;
-        }
-        #auth-screen { display: none; z-index: 2500; background: var(--bg); }
-
-        .auth-card, .manual-box {
-            width: 95%; max-width: 500px; background: white; padding: 30px; 
-            border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-        .manual-box { border-left: 10px solid var(--primary); background: #e0f2f1; }
-
-        input, textarea { width: 100%; padding: 14px; margin-bottom: 15px; border-radius: 10px; border: 1px solid #ccc; box-sizing: border-box; outline: none; font-size: 16px; }
-        button { width: 100%; padding: 14px; border-radius: 10px; border: none; font-weight: bold; cursor: pointer; transition: 0.3s; margin-bottom: 10px; font-size: 16px; }
-        .btn-main { background: var(--primary); color: white; }
-
-        /* App Layout */
-        #app { display: none; padding-top: 240px; }
-        .fixed-header { position: fixed; top: 0; width: 100%; background: var(--primary); color: white; z-index: 1000; padding: 15px 0; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .container { max-width: 600px; margin: auto; padding: 0 15px; }
-        
-        .msg-card { background: white; padding: 18px; margin-bottom: 15px; border-radius: 12px; border-left: 6px solid var(--primary); box-shadow: 0 3px 10px rgba(0,0,0,0.05); }
-        .trust-btn { background: #e0f2f1; color: var(--primary); width: auto; padding: 6px 16px; font-size: 13px; border: 1px solid var(--primary); border-radius: 20px; }
+        body { background: #0f0f0f; color: #00ff00; font-family: monospace; display: flex; flex-direction: column; height: 100vh; margin: 0; }
+        #chat-box { flex: 1; overflow-y: auto; padding: 20px; border-bottom: 1px solid #333; }
+        #input-area { padding: 10px; display: flex; gap: 10px; background: #1a1a1a; }
+        input { flex: 1; background: #000; border: 1px solid #00ff00; color: #00ff00; padding: 10px; outline: none; }
+        button { background: #00ff00; color: #000; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; }
+        .tag-folder { font-size: 0.8em; color: #888; padding: 5px; background: #222; margin-top: 5px; }
+        .msg { margin-bottom: 10px; padding: 5px; border-left: 2px solid #00ff00; }
     </style>
 </head>
 <body>
 
-<div id="manual-overlay">
-    <div class="manual-box">
-        <h2 style="color: var(--primary); margin-top: 0;">📖 নেটওয়ার্ক নির্দেশিকা ও উদ্দেশ্য</h2>
-        <p><b>উদ্দেশ্য:</b> এটি একটি বিকেন্দ্রীভূত ইনফরমেশন নেটওয়ার্ক। কোনো কেন্দ্রীয় সার্ভার না থাকায় আপনার তথ্য নিরাপদ এবং সেন্সরশিপ মুক্ত।</p>
-        <ul style="font-size: 14px; line-height: 1.8;">
-            <li><b>আইডেন্টিটি:</b> আপনার 'প্রাইভেট কি' হারাবেন না।</li>
-            <li><b>অটো ডিলিট:</b> প্রতিটি মেসেজ ৭২ ঘণ্টা পর মুছে যাবে।</li>
-        </ul>
-        <div style="text-align: right; font-weight: bold; margin-top: 15px; color: var(--primary);">— Ana Abdulloh57</div>
-        <button class="btn-main" onclick="acceptConsent()">I Accept & Continue</button>
-    </div>
+<div id="chat-box"></div>
+<div id="hashtag-display" class="tag-folder">Hashtags Saved: </div>
+<div id="input-area">
+    <input type="text" id="msgInput" placeholder="Type message (max 10 #tags)..." maxlength="500">
+    <button onclick="handleSend()">Send</button>
 </div>
 
-<div id="auth-screen">
-    <div class="auth-card">
-        <h1 style="text-align: center; color: var(--primary);">Identity Access</h1>
-        <input type="text" id="keyInput" placeholder="Enter Private Key...">
-        <button class="btn-main" onclick="login()">Access Identity</button>
-        <button style="background: #eee;" onclick="generateIdentity()">Create New ID</button>
-    </div>
-</div>
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+    import { getDatabase, ref, push, onValue } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js";
 
-<div id="app">
-    <div class="fixed-header">
-        <div class="container">
-            <div style="display:flex; justify-content:space-between; font-size:12px; margin-bottom:10px;">
-                <span id="userDisplay">Identity: Loading...</span>
-                <span style="color: #ffeb3b;">Sync: Relay + WebRTC Active</span>
-            </div>
-            <div style="background:white; padding:15px; border-radius:15px;">
-                <textarea id="postBox" rows="2" placeholder="Share information..."></textarea>
-                <button onclick="sendPost()" style="background:var(--primary); color:white; margin:0;">Broadcast Post</button>
-            </div>
-        </div>
-    </div>
-    <div class="container" id="feed"></div>
-</div>
+    // Obfuscated Configuration
+    const _0x4f2 = {
+        apiKey: atob("QUl6YVN5QXd1SzJPX3YxbG8wWFZvLTlPekpiU1dJRkY2MXFqWTJB"),
+        authDomain: atob("YmFuZ2xhZGVzaC00MjI1MS5maXJlYmFzZWFwcC5jb20="),
+        databaseURL: atob("aHR0cHM6Ly9iYW5nbGFkZXNoLTQyMjUxLWRlZmF1bHQtcnRkYi5maXJlYmFzZWlvLmNvbQ=="),
+        projectId: atob("YmFuZ2xhZGVzaC00MjI1MQ=="),
+        appId: atob("MToxNzU1OTIwNjY0NDI6d2ViOjI2Yjg0NDM1YzZlZWNmMGI5NjhjNzM=")
+    };
 
-<script>
-    // Initialize Gun with WebRTC Peer-to-Peer
-    const gun = Gun({
-        peers: [
-            'https://gun-manhattan.herokuapp.com/gun',
-            'https://relay.cactus.chat:443/gun',
-            'https://peer.wall.org/gun'
-        ],
-        rtc: {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' }
-            ]
+    const app = initializeApp(_0x4f2);
+    const db = getDatabase(app);
+
+    const chatBox = document.getElementById('chat-box');
+    const msgInput = document.getElementById('msgInput');
+    const tagDisplay = document.getElementById('hashtag-display');
+
+    // Permanent Hashtag Storage Logic
+    const saveTags = (text) => {
+        const tags = text.match(/#\w+/g) || [];
+        let stored = JSON.parse(localStorage.getItem('_t_folder')) || [];
+        let updated = [...new Set([...stored, ...tags.slice(0, 10)])];
+        localStorage.setItem('_t_folder', JSON.stringify(updated));
+        renderTags();
+    };
+
+    const renderTags = () => {
+        const tags = JSON.parse(localStorage.getItem('_t_folder')) || [];
+        tagDisplay.innerText = "Hashtags Folder: " + tags.join(' ');
+    };
+
+    // Ephemeral Message Storage (24h)
+    const storeMsg = (text) => {
+        const expiry = Date.now() + 86400000;
+        let logs = JSON.parse(localStorage.getItem('_m_logs')) || [];
+        logs.push({ t: text, e: expiry });
+        localStorage.setItem('_m_logs', JSON.stringify(logs));
+        saveTags(text);
+        renderMsgs();
+    };
+
+    const renderMsgs = () => {
+        const now = Date.now();
+        let logs = JSON.parse(localStorage.getItem('_m_logs')) || [];
+        const filtered = logs.filter(m => m.e > now);
+        localStorage.setItem('_m_logs', JSON.stringify(filtered));
+        
+        chatBox.innerHTML = filtered.map(m => `<div class="msg">${m.t}</div>`).join('');
+        chatBox.scrollTop = chatBox.scrollHeight;
+    };
+
+    // Global send function
+    window.handleSend = () => {
+        const val = msgInput.value.trim();
+        if(val) {
+            push(ref(db, 'global_stream'), { m: val, ts: Date.now() });
+            msgInput.value = '';
+        }
+    };
+
+    // Listen for messages (Simulating P2P via RTDB for simple sync)
+    onValue(ref(db, 'global_stream'), (snapshot) => {
+        const data = snapshot.val();
+        if(data) {
+            const lastMsg = Object.values(data).pop();
+            storeMsg(lastMsg.m);
         }
     });
 
-    const sea = Gun.SEA;
-    let myKeys = null;
-
-    // Local Session Management
-    const saved = localStorage.getItem('guardian_v3_session');
-    if(saved) { try { myKeys = JSON.parse(saved); } catch(e) {} }
-
-    function acceptConsent() {
-        document.getElementById('manual-overlay').style.display = 'none';
-        if(myKeys) showApp();
-        else document.getElementById('auth-screen').style.display = 'flex';
-    }
-
-    async function generateIdentity() {
-        const pair = await sea.pair();
-        document.getElementById('keyInput').value = JSON.stringify(pair);
-        alert("CRITICAL: Copy and save this key!");
-    }
-
-    function login() {
-        const raw = document.getElementById('keyInput').value;
-        try {
-            myKeys = JSON.parse(raw);
-            localStorage.setItem('guardian_v3_session', raw);
-            showApp();
-        } catch(e) { alert("Invalid Key!"); }
-    }
-
-    function showApp() {
-        document.getElementById('auth-screen').style.display = 'none';
-        document.getElementById('app').style.display = 'block';
-        document.getElementById('userDisplay').innerText = "ID: " + myKeys.pub.slice(0,10);
-        startNetwork();
-    }
-
-    function sendPost() {
-        const val = document.getElementById('postBox').value.trim();
-        if(!val) return;
-        const time = Date.now();
-        // New data node for guaranteed sync
-        gun.get('guardian_v8_stable').set({ 
-            body: val, author: myKeys.pub, time: time, expires: time + (72 * 3600000) 
-        });
-        document.getElementById('postBox').value = "";
-    }
-
-    function giveTrust(postId) {
-        gun.get('guardian_v8_stable').get(postId).get('trust').get(myKeys.pub).put(true);
-    }
-
-    function startNetwork() {
-        const feed = document.getElementById('feed');
-        gun.get('guardian_v8_stable').map().on((data, id) => {
-            if(!data || !data.body || Date.now() > data.expires) return;
-            
-            let card = document.getElementById(id);
-            if(!card) {
-                card = document.createElement('div');
-                card.id = id; card.className = 'msg-card';
-                feed.prepend(card);
-            }
-
-            gun.get('guardian_v8_stable').get(id).get('trust').on((tData) => {
-                let trustCount = 0;
-                if(tData) {
-                    Object.keys(tData).forEach(k => { if(tData[k] === true) trustCount++; });
-                }
-                card.innerHTML = `
-                    <div style="font-size:16px;">${data.body}</div>
-                    <div style="font-size:10px; color:#888; margin-top:12px; border-top:1px solid #eee; padding-top:5px;">
-                        Source: ${data.author.slice(0,10)}... | ${new Date(data.time).toLocaleTimeString()}
-                    </div>
-                    <button class="trust-btn" onclick="giveTrust('${id}')">Trust (${trustCount})</button>`;
-            });
-        });
-    }
+    renderTags();
+    renderMsgs();
+    setInterval(renderMsgs, 60000); // Cleanup check every minute
 </script>
+
 </body>
 </html>

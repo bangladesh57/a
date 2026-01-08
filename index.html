@@ -11,35 +11,24 @@
             margin: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden;
         }
         
-        /* Combined Top Fixed Area */
         #top-fixed-section {
             display: flex; flex-direction: column; background: #1a1a1a;
             border-bottom: 2px solid #00ff00; z-index: 1000; flex-shrink: 0;
         }
 
-        /* Search Bar */
-        .search-row { 
-            display: flex; padding: 10px; gap: 10px; border-bottom: 1px solid #333; 
-        }
-        #search-input { 
+        .search-row, .post-row { display: flex; padding: 10px; gap: 10px; }
+        .search-row { border-bottom: 1px solid #333; }
+        
+        #search-input, #msgInput { 
             flex: 1; background: #000; border: 1px solid #00ff00; color: #00ff00; 
-            padding: 8px; outline: none; font-size: 14px;
+            padding: 10px; outline: none; font-size: 15px; border-radius: 4px;
         }
 
-        /* Post Box (Now at Top) */
-        .post-row { 
-            display: flex; padding: 10px; gap: 10px; background: #111;
-        }
-        #msgInput { 
-            flex: 1; background: #000; border: 1px solid #00ff00; color: #00ff00; 
-            padding: 10px; outline: none; font-size: 16px;
-        }
         #sendBtn { 
             background: #00ff00; color: #000; border: none; padding: 0 20px; 
             cursor: pointer; font-weight: bold; border-radius: 4px;
         }
 
-        /* Scrollable Message Area (Below the fixed top) */
         main { 
             flex: 1; overflow-y: auto; padding: 15px; 
             display: flex; flex-direction: column; gap: 15px;
@@ -51,9 +40,8 @@
         }
         .tag-row { font-size: 0.8em; margin-bottom: 5px; display: flex; flex-wrap: wrap; gap: 6px; }
         .tag { color: #00ff00; text-decoration: underline; cursor: pointer; font-weight: bold; }
-        .msg-text { word-wrap: break-word; line-height: 1.4; color: #ccc; }
+        .msg-text { word-wrap: break-word; line-height: 1.4; color: #ccc; white-space: pre-wrap; }
 
-        /* Filter Banner */
         #filter-banner {
             background: #003300; padding: 5px 15px; font-size: 12px;
             display: none; justify-content: space-between; align-items: center;
@@ -65,7 +53,7 @@
 <div id="top-fixed-section">
     <div class="search-row">
         <input type="text" id="search-input" placeholder="Search #tags...">
-        <button onclick="clearFilter()" style="background:#444; color:#fff; border:none; padding:5px 10px; cursor:pointer; font-size:12px;">Reset</button>
+        <button onclick="clearFilter()" style="background:#444; color:#fff; border:none; padding:5px 10px; cursor:pointer;">Reset</button>
     </div>
     
     <div class="post-row">
@@ -100,6 +88,13 @@
     const chatBox = document.getElementById('chat-box');
     const searchInput = document.getElementById('search-input');
 
+    // Function to prevent code execution (HTML Escape)
+    const escapeHTML = (str) => {
+        const p = document.createElement('p');
+        p.textContent = str;
+        return p.innerHTML;
+    };
+
     window.applyFilter = (tag) => {
         activeTag = tag.toLowerCase();
         document.getElementById('filter-banner').style.display = 'flex';
@@ -121,37 +116,35 @@
 
     const renderUI = () => {
         const now = Date.now();
-        let logs = JSON.parse(localStorage.getItem('_v6_db')) || [];
-        
-        // Cleanup 24h old
+        let logs = JSON.parse(localStorage.getItem('_v7_db')) || [];
         logs = logs.filter(m => m.exp > now);
-        localStorage.setItem('_v6_db', JSON.stringify(logs));
+        localStorage.setItem('_v7_db', JSON.stringify(logs));
 
         let toDisplay = logs;
         if (activeTag) {
             toDisplay = logs.filter(m => m.txt.toLowerCase().includes(activeTag));
         }
 
-        // Sort: Newest First
         const sorted = toDisplay.sort((a, b) => b.ts - a.ts);
 
         chatBox.innerHTML = sorted.map(m => {
-            const tags = m.txt.match(/#\w+/g) || [];
+            const safeText = escapeHTML(m.txt);
+            const tags = safeText.match(/#\w+/g) || [];
             const tagHtml = tags.map(t => `<span class="tag" onclick="applyFilter('${t}')">${t}</span>`).join(' ');
             return `
                 <div class="msg-container">
                     <div class="tag-row">${tagHtml}</div>
-                    <div class="msg-text">${m.txt}</div>
+                    <div class="msg-text">${safeText}</div>
                 </div>
             `;
         }).join('');
     };
 
     const processSync = (text, time) => {
-        let logs = JSON.parse(localStorage.getItem('_v6_db')) || [];
+        let logs = JSON.parse(localStorage.getItem('_v7_db')) || [];
         if (!logs.some(l => l.txt === text && Math.abs(l.ts - time) < 1000)) {
             logs.push({ txt: text, ts: time, exp: Date.now() + 86400000 });
-            localStorage.setItem('_v6_db', JSON.stringify(logs));
+            localStorage.setItem('_v7_db', JSON.stringify(logs));
         }
         renderUI();
     };
@@ -159,12 +152,12 @@
     window.handleSend = () => {
         const input = document.getElementById('msgInput');
         if (input.value.trim()) {
-            push(ref(db, 'p2p_v6'), { m: input.value, ts: Date.now() });
+            push(ref(db, 'p2p_v7'), { m: input.value, ts: Date.now() });
             input.value = '';
         }
     };
 
-    onValue(ref(db, 'p2p_v6'), (snap) => {
+    onValue(ref(db, 'p2p_v7'), (snap) => {
         const data = snap.val();
         if (data) {
             Object.values(data).forEach(o => processSync(o.m, o.ts));
